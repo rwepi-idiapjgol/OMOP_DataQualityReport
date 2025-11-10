@@ -1,0 +1,807 @@
+---
+title: "CDM Data Quality Report"
+subtitle: "Summary report"
+author: ""
+institute: ""
+date: ""
+output: 
+  html_document:
+    toc: yes
+    toc_depth: 5
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '5'
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE} 
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+---
+
+### Important Notes
+
+
+You can write here any important issues you have encountered when reviewing the data.
+
+---
+
+```{r library, include=FALSE}
+library(dplyr)
+library(readr)
+library(purrr)
+library(ggplot2)
+library(tidyr)
+library(knitr)
+library(DT)
+```
+
+
+### Data release
+
+```{r include=FALSE}
+# Compare previous database version with new one
+database1 = "omop_old1"
+database2 = "omop_new1"
+
+#Default values
+runCheckDB1 = FALSE
+runCheckDB2 = FALSE
+
+## Database 1 ------------------------------------------------------------------
+path1 = file.path(here::here(), database1)
+if(dir.exists(path1)){
+  csv_files1 <- list.files(path = path1, pattern = "\\.csv", full.names = TRUE)
+} 
+#Generate results
+if(!dir.exists(path1)){
+  runCheckDB1 = TRUE
+} else if(is_empty(csv_files1)){
+  runCheckDB1 = TRUE
+}
+
+## Database 2 ------------------------------------------------------------------
+path2 = file.path(here::here(), database2)
+if(dir.exists(path2)){
+  csv_files2 <- list.files(path = path2, pattern = "\\.csv", full.names = TRUE)
+}
+#Generate results
+if(!dir.exists(path2)){
+  runCheckDB2 = TRUE
+} else if(is_empty(csv_files2)){
+  runCheckDB2 = TRUE
+}
+
+```
+
+
+
+```{r, include=FALSE}
+# Run result generation if did not found csv files
+mother_table_name <- "pregnancy_episode" #set to NULL if does not exist
+minimum_counts <- 5
+
+if(any(c(runCheckDB1, runCheckDB2))){
+
+  # load functions
+  source(here::here("functions.R"))
+
+  if(runCheckDB1){
+    # Get results previous database instance
+    getChecksData(server_dbi = Sys.getenv("DB_SERVER"),
+                  port = Sys.getenv("DB_PORT"),
+                  host = Sys.getenv("DB_HOST"),
+                  user = Sys.getenv("DB_USER"),
+                  password = Sys.getenv("DB_PASSWORD"),
+                  cdm_schema = "...",
+                  write_schema = "...",
+                  output_folder = path1)
+  }
+  if(runCheckDB2){
+    # Get results new database instance
+    getChecksData(server_dbi = Sys.getenv("DB_SERVER_NEW"),
+                  port = Sys.getenv("DB_PORT_NEW"),
+                  host = Sys.getenv("DB_HOST_NEW"),
+                  user = Sys.getenv("DB_USER_NEW"),
+                  password = Sys.getenv("DB_PASSWORD_NEW"),
+                  cdm_schema = "...",
+                  write_schema = "...",
+                  output_folder = path2)
+  }
+}
+```
+
+
+```{r, include=FALSE}
+#Load results already generated
+data1 <- list()
+for (file in csv_files1) {
+  table_name <- tools::file_path_sans_ext(basename(file))
+  df <- read_csv(file)%>%
+    mutate(db=database1)
+  data1[[table_name]] <- df
+}
+#Load results already generated
+data2 <- list()
+for (file in csv_files2) {
+  table_name2 <- tools::file_path_sans_ext(basename(file))
+  df2 <- read_csv(file)%>%
+    mutate(db=database2)
+  data2[[table_name2]] <- df2
+}
+
+```
+
+```{r data_release, echo=FALSE}
+if ("cdm_snapshot" %in% names(data1)) {
+  df=data1$cdm_snapshot %>%
+    mutate(cdm_inst=database1)%>%
+    add_row(data2$cdm_snapshot%>%
+    mutate(cdm_inst=database2))%>%
+    select(cdm=cdm_name,inst=cdm_inst, version=cdm_version, release_date=cdm_release_date,
+           voc_version=vocabulary_version, person_count, lastest_obs = 
+             latest_observation_period_end_date, snapshot=snapshot_date)
+  kable(df)
+}
+```
+
+
+### Birth and death dates
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("birth" %in% names(data1)) {
+  data1$birth%>%
+    add_row(data2$birth)%>%
+    ggplot(aes(x=year_of_birth, y=n, color=db, fill=db))+
+    facet_grid(db ~ sex)+
+    geom_bar(stat="identity")+
+    labs(subtitle = "Number of births over time, stratified by sex")
+}
+```
+
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("death" %in% names(data1)) {
+  data1$death %>%
+    add_row(data2$death)%>%
+    ggplot(aes(x=death_date, y=n,color=db, fill=db))+
+    geom_bar(stat="identity", position=position_dodge())+
+    labs(subtitle = "Number of deaths per year")
+}
+```
+
+### Observation periods
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("observation_period" %in% names(data1)) {
+  data1$observation_period%>%
+    gather("obs_date", "n", c(-1,-4))%>%
+    add_row(data2$observation_period%>%
+    gather("obs_date", "n", c(-1,-4)))%>%
+    mutate(date=as.Date(date))%>%
+    mutate(obs_date = factor(obs_date, levels = c("n_start","n_end")))%>%
+    ggplot(aes(x=date, y=n, color=obs_date, fill=obs_date))+
+    geom_bar(stat="identity", position = position_dodge())+
+    facet_grid(db ~ .)+
+    scale_x_date(date_breaks="2 year", date_labels="%Y")+
+    scale_fill_manual(values = c("n_start" = "#1b9e77", "n_end" = "#d97f02")) +
+    scale_color_manual(values = c("n_start" = "#1b9e77", "n_end" = "#d97f02"))+
+    labs(subtitle = "Observation dates")
+}
+```
+
+
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("observation_period" %in% names(data1)) {
+  data1$observation_period%>%
+    gather("obs_date", "n", c(-1,-4))%>%
+    add_row(data2$observation_period%>%
+    gather("obs_date", "n", c(-1,-4)))%>%
+    mutate(date=as.Date(date))%>%
+    mutate(obs_date = factor(obs_date, levels = c("n_start","n_end")))%>%
+    group_by(db)%>%
+    arrange(date)%>%
+    slice(-1)%>%
+    slice(1:(n()-1))%>%
+    ggplot(aes(x=date, y=n, color=obs_date, fill=obs_date))+
+    geom_bar(stat="identity", position = position_dodge())+
+    facet_grid(db ~ .)+
+    scale_x_date(date_breaks="2 year", date_labels="%Y")+
+    scale_fill_manual(values = c("n_start" = "#1b9e77", "n_end" = "#d97f02")) +
+    scale_color_manual(values = c("n_start" = "#1b9e77", "n_end" = "#d97f02"))+
+    labs(subtitle = "Observation dates excluding database start and end dates")
+}
+
+```
+
+### Pregnancies
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("pregnancies" %in% names(data1)) {
+  data1$pregnancies%>%
+    gather("pregnancy_date", "n", c(-1,-4))%>%
+    add_row(data2$pregnancies %>%
+    gather("pregnancy_date", "n", c(-1,-4)))%>%
+    mutate(date=as.Date(date))%>%
+    mutate(pregnancy_date = factor(pregnancy_date, levels = c("n_start","n_end")))%>%
+    ggplot(aes(x=date, y=n, color=pregnancy_date, fill=pregnancy_date))+
+    geom_bar(stat="identity", position = position_dodge())+
+    facet_grid(db ~ .)+
+    scale_x_date(date_breaks="2 year", date_labels="%Y")+
+    scale_fill_manual(values = c("n_start" = "#1b9e77", "n_end" = "#d97f02")) +
+    scale_color_manual(values = c("n_start" = "#1b9e77", "n_end" = "#d97f02"))
+}
+```
+
+
+### Fact relationship
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("fact_relationship" %in% names(data1)) {
+  data1$fact_relationship%>%
+    add_row(data2$fact_relationship)%>%
+    group_by(db, concept_name) %>% 
+    ggplot(aes(x=concept_name, y=n, color=db, fill=db))+
+    geom_bar(stat="identity", position = position_dodge(width = 0.5), width = 0.5)+
+    geom_text(aes(label = n, group=db), position = position_dodge(width = 0.5), vjust = -0.2, size = 3)
+}
+
+```
+
+
+### CDM tables
+
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("table_counts" %in% names(data1)) {
+  
+  data1$table_counts%>%
+    add_row(data2$table_counts)%>%
+    group_by(db, table) %>% 
+    ggplot(aes(x=table, y=n_rec, color=table, fill=table))+
+    geom_bar(
+      aes(group = db),                
+      stat = "identity",
+      position = position_dodge(width = 0.7),
+      width = 0.6
+    ) +
+    geom_text(
+      aes(label = db, group = db),
+      position = position_dodge(width = 0.8),
+      vjust = -0.3,
+      size = 2.5
+    ) +
+    labs(subtitle  ="Number of records")+
+    theme(
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+      strip.text = element_text(face = "bold")
+    )
+}
+
+```
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+
+if ("table_counts" %in% names(data1)) {
+  data1$table_counts%>%
+    add_row(data2$table_counts)%>%
+    group_by(db, table) %>% 
+    ggplot(aes(x=table, y=n_sub, color=table, fill=table))+
+    geom_bar(
+      aes(group = db),                # agrupa por base de datos
+      stat = "identity",
+      position = position_dodge(width = 0.7),
+      width = 0.6
+    ) +
+    geom_text(
+      aes(label = db, group = db),
+      position = position_dodge(width = 0.8),
+      vjust = -0.3,
+      size = 2.5
+    ) +
+    labs(subtitle  ="Number of subjects")+
+    theme(
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+      strip.text = element_text(face = "bold")
+    )
+}
+
+```
+
+
+
+### Visits
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("visits" %in% names(data1)) {
+  data1$visits%>%
+    add_row(data2$visits)%>%
+    group_by(db, type_visit) %>% 
+    summarise(mean_visits_per_year = as.integer(mean(n)), .groups = "keep") %>% 
+    ggplot(aes(x=type_visit, y=mean_visits_per_year, color=db, fill=db))+
+    geom_bar(
+      aes(group = db), 
+      stat="identity", 
+      position = position_dodge(width = 0.8),
+      width = 0.7
+    )+
+    geom_text(
+      aes(label = mean_visits_per_year, group = db),
+      position = position_dodge(width = 0.8),
+      vjust = -0.3,
+      size = 2.5
+    ) +
+    labs((subtitle  ="Mean number of different type of visits in one year"))
+  
+  # data1$visits%>%
+  #   add_row(data2$visits)%>%
+  #   group_by(db, type_visit) %>%   
+  #   ggplot(aes(x = date_visit, y = n, color = type_visit)) +  
+  #   geom_line(size = 1.2) +
+  #   geom_point(size = 2) +
+  #   facet_grid(db ~ .) +
+  #   labs(
+  #     x = "Year",
+  #     y = "Mean visits per person",
+  #     title = "Trend in Average Visits per Year"
+  #   ) +
+  #   theme_minimal()
+}
+
+```
+
+
+# Visits per year for the new instance 
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("visits" %in% names(data2)) {
+  data2$visits %>%
+    ggplot(aes(x = factor(date_visit), y = n, color = type_visit, fill = type_visit)) +
+    geom_bar(stat = "identity", position = position_dodge(width = 0.4), width = 0.6) +
+    theme_minimal()+
+    theme(
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+      strip.text = element_text(face = "bold")
+    )+
+    facet_wrap(~ type_visit, ncol = 2, scales = "free_y") +
+    labs(subtitle  ="Number of visits per year for the new instance")
+}
+
+```
+
+
+### Procedures
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("procedures" %in% names(data1)) {
+  data1$procedures %>%
+    add_row(data2$procedures) %>%
+    ggplot(aes(x=vocabulary_id, y=n_total_voc, color=vocabulary_id, fill=vocabulary_id))+
+    geom_bar(stat="identity")+
+    geom_text(aes(label = n_total_voc), vjust = -0.1, size = 3)+
+    facet_grid(db ~ .)+
+    labs(subtitle  ="Records of procedures grouped by vocabulary id")
+}
+```
+
+
+### Measurements
+
+#### Concepts
+
+Measurement concepts that have changed (removed / added) or have decreased the records/subjects in the new instance
+
+```{r,  fig.width=10, fig.height=4, echo=FALSE}
+if ("measurements_concepts" %in% names(data1)) {
+  data_mes <- data1$measurements_concepts %>%
+    rename(n_rec_old = n_rec, n_sub_old=n_sub, concept_name_old = concept_name) %>% 
+    select(-db) %>% 
+    full_join(
+      data2$measurements_concepts %>% 
+        rename(n_rec_new = n_rec, n_sub_new=n_sub, concept_name_new = concept_name) %>% 
+        select( -db), 
+      by =c("measurement_concept_id")
+    ) %>% 
+    mutate(n_rec_dif = n_rec_new - n_rec_old, n_sub_dif = n_sub_new - n_sub_old ) 
+  
+  data_mes %>%
+    filter(is.na(n_rec_new)) %>% 
+    select(measurement_concept_id, concept_name = concept_name_old, n_rec_old, n_sub_old, n_rec_new, n_sub_new) %>% 
+    add_row(data_mes %>%
+              filter(is.na(n_rec_old)) %>% 
+              select(measurement_concept_id, concept_name = concept_name_new, n_rec_old, n_sub_old, n_rec_new, n_sub_new)
+            ) %>% 
+    add_row(data_mes %>%
+              filter(n_rec_dif < 0 | n_sub_dif <0) %>% 
+              select(measurement_concept_id, concept_name = concept_name_new, n_rec_old, n_sub_old, n_rec_new, n_sub_new)
+            ) %>% 
+    rename(meas_concept_id = measurement_concept_id) %>% 
+    mutate(issue = ifelse(is.na(n_rec_new), "removed", ifelse(is.na(n_rec_old), "added", "decreased n"))) %>% 
+    datatable(
+      filter= "top",
+      options = list(
+              scrollX = TRUE,     
+              scrollY = "400px",  
+              pageLength = 100,   
+              dom = 't'           
+            ))%>%
+    formatStyle(
+      'issue',
+      target = 'row',
+      backgroundColor = styleEqual(
+        c("removed", "added", "decreased n"), 
+        c("lightpink",  "lightgreen", "orange")
+      )
+    )
+    
+}
+
+
+```
+
+
+
+### Observation 
+
+#### Source concepts
+
+Observation concepts that have changed (removed / added) or have decreased the records/subjects in the new instance
+
+```{r,  fig.width=8, fig.height=4, echo=FALSE}
+if ("observation_source_values" %in% names(data1)) {
+  diff_in_data2 <- data2$observation_source_values %>%
+    anti_join(data1$observation_source_values, by = "observation_source_value")
+  
+  data_obs_all <- diff_in_data2 %>% 
+      select(observation_source_value, source_concept_name, obs_concept_id, n_24 =n) %>% 
+      mutate(n_23 = NA, issue = "added") %>% 
+      arrange(desc(n_24)) %>% 
+    add_row(data1$observation_source_values %>%
+      anti_join(data2$observation_source_values, by = "observation_source_value") %>% 
+      select(observation_source_value, source_concept_name, obs_concept_id, n_23 =n) %>% 
+      mutate(n_24 = NA, issue = "removed") %>% 
+      arrange(desc(n_23)) 
+    ) %>% 
+    add_row(
+      data1$observation_source_values %>%
+        select(observation_source_value, source_concept_name, obs_concept_id, n_23 =n) %>% 
+        inner_join(
+          data2$observation_source_values %>% 
+            select(observation_source_value, n_24 = n),
+          by = "observation_source_value"
+        ) %>% 
+        filter(n_24 < n_23) %>% 
+        mutate(issue = "decreased n") %>% 
+        arrange(desc(n_23))
+      ) 
+  
+  data_obs_all %>% 
+    filter(n_24 >= 10 | n_23 >= 10) %>% 
+    datatable(
+      filter = "top",
+      options = list(
+              scrollX = TRUE,     
+              scrollY = "400px",
+              # pageLength = 100, 
+              # scrollY = "120vh",  
+              paging = FALSE,    # sin paginación
+              dom = 't'           
+            ))%>%
+    formatStyle(
+      'issue',
+      target = 'row',
+      backgroundColor = styleEqual(
+        c("removed", "added", "decreased n"), 
+        c("lightpink",  "lightgreen", "#FFD580")
+      )
+    )
+}
+```
+
+
+#### Nationality
+
+
+```{r,  echo=FALSE}
+if ("obs_nationality" %in% names(data1)) {
+  data1$obs_nationality %>%
+    rename(n_23 = n) %>% 
+    select(-db) %>% 
+    full_join(
+      data2$obs_nationality %>% 
+        rename(n_24 = n) %>% 
+        select(-db),
+      by = "nationality"
+    ) %>% 
+    arrange(desc(n_24)) %>%
+    mutate(
+      n_23 = ifelse(n_23 <5, "<5", as.character(n_23)),
+      n_24 = ifelse(n_24 <5, "<5", as.character(n_24))              
+    ) %>% 
+    datatable(options = list(
+              scrollX = TRUE,
+              scrollY = "400px",
+              pageLength = 10000,
+              dom = 't'
+            ))
+}
+```
+
+
+### Drug exposure
+
+#### Drug quantity and days supply
+Check for each type of drug record, how is the quantity value and days supply recorded (if it's NA or VALUE (zero/non-zero)).
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("drug_quantity" %in% names(data1)) {
+  data1$drug_quantity %>% 
+    add_row(data2$drug_quantity) %>% 
+    group_by(db, concept_name) %>% 
+    mutate(total_n = sum(n)) %>% 
+    ggplot(aes(x = concept_name, y = n, fill = quantity_val)) +
+    geom_bar(
+      aes(group = db),
+      stat="identity",
+      position = position_dodge(width=0.6),
+      width=0.5
+    )+
+    geom_text(
+      aes(label = db, group=db),
+      position = position_dodge(width=0.6),
+      vjust = -0.1,
+      size = 3
+    )+
+    # scale_fill_manual(values = c("non-zero value" = "purple", "zero value" = "#1b9e67", "NA" = "grey")) +
+    # scale_color_manual(values = c("non-zero value" = "purple", "zero value" = "#1b9e67", "NA" = "grey"))+
+    labs(subtitle = "Drug quantity")
+}
+```
+
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("drug_days_supply" %in% names(data1)) {
+  data1$drug_days_supply %>% 
+    add_row(data2$drug_days_supply) %>% 
+    group_by(concept_name, db) %>% 
+    ggplot(aes(x = concept_name, y = n, fill = days_supply_val)) +
+    geom_bar(
+      aes(group = db),
+      stat="identity",
+      position = position_dodge(width=0.6),
+      width=0.5
+    )+
+    geom_text(
+      aes(label = db, group=db),
+      position = position_dodge(width=0.6),
+      vjust = -0.1,
+      size = 3
+    )+
+    # scale_fill_manual(values = c("non-zero value" = "purple", "zero value" = "#1b9e67", "NA" = "grey")) +
+    # scale_color_manual(values = c("non-zero value" = "purple", "zero value" = "#1b9e67", "NA" = "grey"))+
+    labs(subtitle = "Drug days supply")
+}
+
+```
+
+
+#### Drug source values
+
+Check how many drug concepts are mapped to drug_concept_id = 0
+
+```{r, fig.width=8, fig.height=5, echo=FALSE}
+if ("drug_source_values" %in% names(data1)) {
+  data1$drug_source_values %>% 
+    add_row(data2$drug_source_values) %>% 
+    mutate(label = paste0(n_id0, " (", round(100 * n_id0 / n, 1), "%)")) %>%
+    pivot_longer(
+      cols = c(n, n_id0),
+      names_to = "variable",
+      values_to = "n"
+    ) %>% 
+    mutate(label = ifelse(variable == "n_id0", label , n)) %>% 
+    ggplot(aes(x = variable, y = n, colour= db,  fill = db)) +
+    geom_bar(stat="identity",position = position_dodge(width=0.6),width=0.6)+
+    geom_text(
+      aes(label = label, group=db),
+      position = position_dodge(width=0.6),
+      vjust = -0.3,
+      size = 3
+    ) +
+    labs(subtitle = "Number of distinct drug source values (n_id0: those with drug_concept_id == 0)")+
+    theme_minimal() 
+}
+```
+
+Check how many records represents the drugs with drug_concept_id = 0
+
+```{r, fig.width=8, fig.height=8, echo=FALSE}
+if ("drug_source_values_id0_n" %in% names(data1) & "drugs_id_n" %in% names(data1)) {
+  drugs_id_zero <- data1$drug_source_values_id0_n %>%
+    group_by(drug_type_concept_id) %>% 
+    summarise(n_rec = sum(n)) %>% 
+    mutate(db = database1, drug_id = "id=0") %>% 
+    add_row(
+      data2$drug_source_values_id0_n %>%
+        group_by(drug_type_concept_id) %>%
+        summarise(n_rec = sum(n)) %>%
+        mutate(db = database2, drug_id = "id=0")
+      )
+  
+  drugs_id_nonzero <- data1$drugs_id_n %>% 
+    add_row(data2$drugs_id_n) %>% 
+    mutate(drug_id = "id") 
+  
+  n_tot <- drugs_id_zero %>% 
+    add_row(drugs_id_nonzero) %>% 
+    group_by(db) %>% 
+    summarise(n_tot = sum(n_rec)) 
+  
+  drugs_id_zero %>% 
+    add_row(drugs_id_nonzero) %>% 
+    group_by(db, drug_id) %>% 
+    summarise(n = sum(n_rec), .groups = "keep") %>% 
+    left_join(n_tot, by="db") %>% 
+    rename(drug_concept_id = drug_id) %>% 
+    mutate(label = paste0(n, " (", round(100 * n / n_tot, 1), "%)")) %>%
+    ggplot(aes(x = drug_concept_id , y = n, colour= db,  fill = db)) +
+    geom_bar(stat="identity",position = position_dodge(width=0.6),width=0.6)+
+    geom_text(
+      aes(label = label, group=db),
+      position = position_dodge(width=0.6),
+      vjust = -0.3,
+      size = 3
+    ) +
+    labs(subtitle = "Non-zero and zero drug_concept_id: number of records")+
+    theme_minimal() 
+}
+```
+
+
+
+### Conditions & medications
+
+```{r,  echo=FALSE}
+swr = function(string, nwrap=20) {
+  paste(strwrap(string, width=nwrap), collapse="\n")
+}
+swr = Vectorize(swr)
+```
+
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("conditions_medications" %in% names(data1)) {
+  data1$conditions_medications%>%
+    add_row(data2$conditions_medications)%>%
+    filter(grepl('ATC', cohort_name,ignore.case=TRUE))%>%
+    mutate(cohort_name=swr(cohort_name))%>%
+    ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
+    facet_grid(cohort_name~ ., scales="free_y")+
+    geom_bar(stat="identity", position="dodge")+
+    theme(strip.text = element_text(size = 8),
+          legend.position = "bottom") +
+    labs(subtitle = "Cohorts of individuals with antidepressants, anxiolytics and hypnotics/sedatives (ATC 3rd level)")
+}
+```
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("conditions_medications" %in% names(data1)) {
+  data1$conditions_medications%>%
+    add_row(data2$conditions_medications)%>%
+    filter((grepl('Pregnancy',cohort_name)) |
+   (grepl('perinatal',cohort_name)))%>%
+    mutate(cohort_name=swr(cohort_name))%>%
+    ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
+    facet_grid(cohort_name~ ., scales="free_y")+
+    geom_bar(stat="identity", position="dodge")+
+    theme(strip.text = element_text(size = 8),
+          legend.position = "bottom") +
+    labs(subtitle = "Cohorts of individuals with certain conditions originating in the perinatal period")
+}
+```
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("conditions_medications" %in% names(data1)) {
+  data1$conditions_medications%>%
+    add_row(data2$conditions_medications)%>%
+    filter((grepl('heart',cohort_name)) |
+          (grepl('veins',cohort_name)) |
+          (grepl('arteries',cohort_name)))%>%
+    mutate(cohort_name=swr(cohort_name))%>%
+    ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
+    facet_grid(cohort_name~ ., scales="free_y")+
+    geom_bar(stat="identity", position="dodge")+
+    theme(strip.text = element_text(size = 6),
+          legend.position = "bottom") +
+    labs(subtitle = "Cohorts of individuals with cardiovascular diseases")
+}
+```
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("conditions_medications" %in% names(data1)) {
+  data1$conditions_medications%>%
+    add_row(data2$conditions_medications)%>%
+    filter((grepl('nervous',cohort_name)) |
+          (grepl('renal',cohort_name)))%>%
+    mutate(cohort_name=swr(cohort_name))%>%
+    ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
+    facet_grid(cohort_name~ ., scales="free_y")+
+    geom_bar(stat="identity", position="dodge")+
+    theme(strip.text = element_text(size = 8),
+          legend.position = "bottom") +
+    labs(subtitle = "Cohorts of individuals with nervous and renal diseases")
+}
+```
+
+### Sex-specific diseases
+```{r,  fig.width=8, fig.height=6, echo=FALSE}
+if ("cancer_sex" %in% names(data1)) {
+  data1$cancer_sex%>%
+    add_row(data2$cancer_sex)%>%
+    ggplot(aes(x=cohort_name, y=n, color= db, fill=db))+
+    facet_grid(sex ~ ., scales="free_y")+
+    geom_bar(aes(group=db),stat="identity", position=position_dodge(width = 0.6),width = 0.6)+
+    geom_text(aes(label = n, group = db), position=position_dodge(width = 0.6), vjust = -0.1, size = 3)+
+    labs(subtitle = "Cohorts of individuals with certain sex-specific cancers")
+}
+```
+
+
+### Concepts mapping
+
+#### Source to concept map
+
+Rows that have changed from previous instance to new one:
+
+```{r,  fig.width=8, fig.height=5, echo=FALSE}
+if ("source_to_concept" %in% names(data1)) {
+  data1$source_to_concept %>% 
+    select(
+      source_code, 
+      source_description = source_code_description, 
+      target_voc_24= target_vocabulary_id, 
+      target_id_24 = target_concept_id
+    ) %>% 
+    full_join(
+      data2$source_to_concept %>% 
+        select(
+          source_code,
+          target_voc_23= target_vocabulary_id,
+          target_id_23 = target_concept_id
+        ), 
+      by ="source_code"
+    ) %>% 
+    filter(target_id_24 != target_id_23) %>% 
+    select(source_code, source_description, target_id_23, target_voc_23, target_id_24, target_voc_24) %>% 
+    mutate(issue = 
+       ifelse(target_voc_23 =="None" & target_voc_24 !="None", "added", 
+              ifelse(target_voc_23 !="None" & target_voc_24 =="None", "removed","changed")
+              )
+    ) %>% 
+    mutate(issue = factor(issue, levels = c("changed", "added", "removed"))) %>% 
+    arrange(issue) %>% 
+    datatable(
+      filter= "top",
+      options = list(
+        scrollX = TRUE,     
+        scrollY = "400px",  
+        # pageLength = 100,   
+        paging=FALSE,
+        dom = 't'           
+      )) %>% 
+      formatStyle(
+        'issue',
+        target = 'row',
+        backgroundColor = styleEqual(
+              c("changed", "added", "removed"), 
+              c("#FFD580","lightgreen","lightpink")
+        )
+      )
+}
+```
+
+
+
+
+
