@@ -42,7 +42,7 @@ summarise_cols_na <- function(cdm, table_name){
   result_tbl <- bind_rows(results)
 }
 
-getChecksData <- function(server_dbi, port, host, user, password, cdm_schema, write_schema, output_folder =c("Results")) {
+getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_schema, write_schema, output_folder =c("Results")) {
   
   # mother_table_name <- "pregnancy_episode"
   # minimum_counts <- 5
@@ -56,7 +56,7 @@ getChecksData <- function(server_dbi, port, host, user, password, cdm_schema, wr
   }
   #CDM Connection
   db <- DBI::dbConnect(
-    RPostgres::Postgres(),
+    drv = dbms,
     dbname = server_dbi,
     port = port,
     host = host,
@@ -427,6 +427,7 @@ getChecksData <- function(server_dbi, port, host, user, password, cdm_schema, wr
   
 
 }
+
 
 
 
