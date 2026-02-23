@@ -104,8 +104,8 @@ person_db <- cdm$person %>%
   left_join(
     cdm$observation_period %>%
       mutate(
-        observation_period_start_date = lubridate::floor_date(observation_period_start_date, "month"),
-        observation_period_end_date = lubridate::floor_date(observation_period_end_date, "month")
+        observation_period_start_date = dbplyr::sql("DATE_TRUNC('month', observation_period_start_date)"),
+        observation_period_end_date = dbplyr::sql("DATE_TRUNC('month', observation_period_end_date)")
       ) %>%
       select(person_id, observation_period_start_date, observation_period_end_date)
   ) %>%
@@ -477,6 +477,7 @@ if(ncon1 > 0){
 
 CDMConnector::cdmDisconnect(cdm)
   
+
 
 
 
