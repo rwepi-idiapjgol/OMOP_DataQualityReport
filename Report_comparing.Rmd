@@ -83,6 +83,7 @@ if(!dir.exists(path2)){
 ```{r, include=FALSE}
 # Run result generation if did not found csv files
 mother_table_name <- "pregnancy_episode" #set to NULL if does not exist
+# mother_table_schema <- "..."
 minimum_counts <- 5
 
 driver = RPostgres::Postgres()   #change it based on DBMS
@@ -804,6 +805,7 @@ if ("source_to_concept" %in% names(data1)) {
       )
 }
 ```
+
 
 
 
