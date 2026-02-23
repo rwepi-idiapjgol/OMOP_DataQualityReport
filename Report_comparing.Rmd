@@ -45,79 +45,26 @@ library(DT)
 
 ```{r include=FALSE}
 # Compare previous database version with new one
-database1 = "omop_old1"
-database2 = "omop_new1"
-
-#Default values
-runCheckDB1 = FALSE
-runCheckDB2 = FALSE
+database1 = "omop_v1"    #old version
+database2 = "omop_v2"    #new version
 
 ## Database 1 ------------------------------------------------------------------
 path1 = file.path(here::here(), database1)
 if(dir.exists(path1)){
   csv_files1 <- list.files(path = path1, pattern = "\\.csv", full.names = TRUE)
-} 
-#Generate results
-if(!dir.exists(path1)){
-  runCheckDB1 = TRUE
-} else if(is_empty(csv_files1)){
-  runCheckDB1 = TRUE
+} else{
+  message("RunCode.R for database1 should be previously executed.")
 }
+
 
 ## Database 2 ------------------------------------------------------------------
 path2 = file.path(here::here(), database2)
 if(dir.exists(path2)){
   csv_files2 <- list.files(path = path2, pattern = "\\.csv", full.names = TRUE)
-}
-#Generate results
-if(!dir.exists(path2)){
-  runCheckDB2 = TRUE
-} else if(is_empty(csv_files2)){
-  runCheckDB2 = TRUE
+}else{
+  message("RunCode.R for database2 should be previously executed.")
 }
 
-```
-
-
-
-```{r, include=FALSE}
-# Run result generation if did not found csv files
-mother_table_name <- "pregnancy_episode" #set to NULL if does not exist
-# mother_table_schema <- "..."
-minimum_counts <- 5
-
-driver = RPostgres::Postgres()   #change it based on DBMS
-
-if(any(c(runCheckDB1, runCheckDB2))){
-
-  # load functions
-  source(here::here("functions.R"))
-
-  if(runCheckDB1){
-    # Get results previous database instance
-    getChecksData(dbms = driver, 
-                  server_dbi = Sys.getenv("DB_SERVER"),
-                  port = Sys.getenv("DB_PORT"),
-                  host = Sys.getenv("DB_HOST"),
-                  user = Sys.getenv("DB_USER"),
-                  password = Sys.getenv("DB_PASSWORD"),
-                  cdm_schema = "...",
-                  write_schema = "...",
-                  output_folder = path1)
-  }
-  if(runCheckDB2){
-    # Get results new database instance
-    getChecksData(dbms = driver, 
-                  server_dbi = Sys.getenv("DB_SERVER_NEW"),
-                  port = Sys.getenv("DB_PORT_NEW"),
-                  host = Sys.getenv("DB_HOST_NEW"),
-                  user = Sys.getenv("DB_USER_NEW"),
-                  password = Sys.getenv("DB_PASSWORD_NEW"),
-                  cdm_schema = "...",
-                  write_schema = "...",
-                  output_folder = path2)
-  }
-}
 ```
 
 
@@ -805,10 +752,4 @@ if ("source_to_concept" %in% names(data1)) {
       )
 }
 ```
-
-
-
-
-
-
 
