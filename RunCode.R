@@ -187,12 +187,12 @@ if (nfr > 0) {
 # Pregnancies
 if(!is.null(mother_table)){
   cdm$mother_table %>%
-    mutate(date = lubridate::floor_date(pregnancy_start_date, "month")) %>%
+    mutate(date = dbplyr::sql("DATE_TRUNC('month', pregnancy_start_date)")) %>%
     group_by(date) %>%
     tally(name = "n_start") %>%
     left_join(
       cdm$mother_table %>%
-        mutate(date = lubridate::floor_date(pregnancy_end_date, "month")) %>%
+        mutate(date = dbplyr::sql("DATE_TRUNC('month', pregnancy_end_date)")) %>%
         group_by(date) %>%
         tally(name = "n_end")
     ) %>%
@@ -477,6 +477,7 @@ if(ncon1 > 0){
 
 CDMConnector::cdmDisconnect(cdm)
   
+
 
 
 
