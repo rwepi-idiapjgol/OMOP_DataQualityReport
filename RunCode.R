@@ -4,6 +4,7 @@
 library(tidyr)
 library(readr)
 library(purrr)
+library(dplyr)
 
 ################################################################################
 # Load functions
@@ -89,7 +90,7 @@ if(!exists("mother_table_name")){
 }
 if(!is.null(mother_table)){
   cdm$mother_table <- mother_table %>%
-    compute(name="mother_table", overwrite=TRUE)
+    compute(name="mother_table", overwrite=TRUE, temporary = FALSE)
 }
 
 # Snapshot
@@ -476,6 +477,7 @@ if(ncon1 > 0){
 
 CDMConnector::cdmDisconnect(cdm)
   
+
 
 
 
