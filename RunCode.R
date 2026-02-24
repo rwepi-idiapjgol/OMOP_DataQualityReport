@@ -104,8 +104,12 @@ person_db <- cdm$person %>%
   left_join(
     cdm$observation_period %>%
       mutate(
-        observation_period_start_date = dbplyr::sql("DATE_TRUNC('month', observation_period_start_date)"),
-        observation_period_end_date = dbplyr::sql("DATE_TRUNC('month', observation_period_end_date)")
+        observation_period_start_date = dbplyr::sql(
+          "DATEFROMPARTS(YEAR(observation_period_start_date),MONTH(observation_period_start_date),1)"
+        ),
+        observation_period_end_date = dbplyr::sql(
+          "DATEFROMPARTS(YEAR(observation_period_end_date),MONTH(observation_period_end_date),1)"
+        )
       ) %>%
       select(person_id, observation_period_start_date, observation_period_end_date)
   ) %>%
@@ -183,23 +187,29 @@ if (nfr > 0) {
   message("Fact_relationship table is empty.")
 }
 
-
 # Pregnancies
 if(!is.null(mother_table)){
   cdm$mother_table %>%
-    mutate(date = dbplyr::sql("DATE_TRUNC('month', pregnancy_start_date)")) %>%
+    mutate(
+      date = dbplyr::sql(
+        "DATEFROMPARTS(YEAR(pregnancy_start_date),MONTH(pregnancy_start_date),1)"
+      )
+    ) %>%
     group_by(date) %>%
     tally(name = "n_start") %>%
     left_join(
       cdm$mother_table %>%
-        mutate(date = dbplyr::sql("DATE_TRUNC('month', pregnancy_end_date)")) %>%
+        mutate(
+          date = dbplyr::sql(
+            "DATEFROMPARTS(YEAR(pregnancy_end_date),MONTH(pregnancy_end_date),1)"
+          )
+        ) %>%
         group_by(date) %>%
         tally(name = "n_end")
     ) %>%
     collect() %>%
     minCountFilter(c("n_start", "n_end"), minimum_counts) %>% 
     write_csv(paste0(output_folder, "/pregnancies.csv"))
-
 }
 
 #Source to concept map
@@ -477,6 +487,7 @@ if(ncon1 > 0){
 
 CDMConnector::cdmDisconnect(cdm)
   
+
 
 
 
