@@ -406,30 +406,30 @@ if ("observation_source_values" %in% names(data1)) {
     anti_join(data1$observation_source_values, by = "observation_source_value")
   
   data_obs_all <- diff_in_data2 %>% 
-      select(observation_source_value, source_concept_name, obs_concept_id, n_24 =n) %>% 
-      mutate(n_23 = NA, issue = "added") %>% 
-      arrange(desc(n_24)) %>% 
+      select(observation_source_value, source_concept_name, obs_concept_id, n_new =n) %>% 
+      mutate(n_old = NA, issue = "added") %>% 
+      arrange(desc(n_new)) %>% 
     add_row(data1$observation_source_values %>%
       anti_join(data2$observation_source_values, by = "observation_source_value") %>% 
-      select(observation_source_value, source_concept_name, obs_concept_id, n_23 =n) %>% 
-      mutate(n_24 = NA, issue = "removed") %>% 
-      arrange(desc(n_23)) 
+      select(observation_source_value, source_concept_name, obs_concept_id, n_old =n) %>% 
+      mutate(n_new = NA, issue = "removed") %>% 
+      arrange(desc(n_old)) 
     ) %>% 
     add_row(
       data1$observation_source_values %>%
-        select(observation_source_value, source_concept_name, obs_concept_id, n_23 =n) %>% 
+        select(observation_source_value, source_concept_name, obs_concept_id, n_old =n) %>% 
         inner_join(
           data2$observation_source_values %>% 
-            select(observation_source_value, n_24 = n),
+            select(observation_source_value, n_new = n),
           by = "observation_source_value"
         ) %>% 
-        filter(n_24 < n_23) %>% 
+        filter(n_new < n_old) %>% 
         mutate(issue = "decreased n") %>% 
-        arrange(desc(n_23))
+        arrange(desc(n_old))
       ) 
   
   data_obs_all %>% 
-    filter(n_24 >= 10 | n_23 >= 10) %>% 
+    filter(n_new >= 10 | n_old >= 10) %>% 
     datatable(
       filter = "top",
       options = list(
@@ -458,18 +458,18 @@ if ("observation_source_values" %in% names(data1)) {
 ```{r,  echo=FALSE}
 if ("obs_nationality" %in% names(data1)) {
   data1$obs_nationality %>%
-    rename(n_23 = n) %>% 
+    rename(n_old = n) %>% 
     select(-db) %>% 
     full_join(
       data2$obs_nationality %>% 
-        rename(n_24 = n) %>% 
+        rename(n_new = n) %>% 
         select(-db),
       by = "nationality"
     ) %>% 
-    arrange(desc(n_24)) %>%
+    arrange(desc(n_new)) %>%
     mutate(
-      n_23 = ifelse(n_23 <5, "<5", as.character(n_23)),
-      n_24 = ifelse(n_24 <5, "<5", as.character(n_24))              
+      n_old = ifelse(n_old <5, "<5", as.character(n_old)),
+      n_new = ifelse(n_new <5, "<5", as.character(n_new))              
     ) %>% 
     datatable(options = list(
               scrollX = TRUE,
@@ -712,23 +712,23 @@ if ("source_to_concept" %in% names(data1)) {
     select(
       source_code, 
       source_description = source_code_description, 
-      target_voc_24= target_vocabulary_id, 
-      target_id_24 = target_concept_id
+      target_voc_old= target_vocabulary_id, 
+      target_id_old = target_concept_id
     ) %>% 
     full_join(
       data2$source_to_concept %>% 
         select(
           source_code,
-          target_voc_23= target_vocabulary_id,
-          target_id_23 = target_concept_id
+          target_voc_new= target_vocabulary_id,
+          target_id_new = target_concept_id
         ), 
       by ="source_code"
     ) %>% 
-    filter(target_id_24 != target_id_23) %>% 
-    select(source_code, source_description, target_id_23, target_voc_23, target_id_24, target_voc_24) %>% 
+    filter(target_id_old != target_id_new) %>% 
+    select(source_code, source_description, target_id_new, target_voc_new, target_id_old, target_voc_old) %>% 
     mutate(issue = 
-       ifelse(target_voc_23 =="None" & target_voc_24 !="None", "added", 
-              ifelse(target_voc_23 !="None" & target_voc_24 =="None", "removed","changed")
+       ifelse(target_voc_new =="None" & target_voc_old !="None", "added", 
+              ifelse(target_voc_new !="None" & target_voc_old =="None", "removed","changed")
               )
     ) %>% 
     mutate(issue = factor(issue, levels = c("changed", "added", "removed"))) %>% 
@@ -752,4 +752,6 @@ if ("source_to_concept" %in% names(data1)) {
       )
 }
 ```
+
+
 
