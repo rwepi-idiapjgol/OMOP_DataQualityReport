@@ -1,5 +1,3 @@
-library(tidyr)
-
 minCountFilter <- function(x, col_names, minCounts) {
   if(nrow(x) != 0) {
     return(x %>% mutate(across(col_names, ~ if_else(.x < minCounts, NA, .x))))
@@ -405,21 +403,24 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
       write_csv(paste0(output_folder, "/drug_days_supply.csv"))
     
     
-    cdm$drug_exposure %>%
+    drug_source <- cdm$drug_exposure %>%
       distinct(drug_source_value, .keep_all = TRUE) %>%
       summarise(n = n_distinct(drug_source_value), n_id0= sum(as.integer(drug_concept_id == 0))) %>%
-      collect() %>%
+      collect() 
+    
+    drug_source %>%
       write_csv(paste0(output_folder, "/drug_source_values.csv"))
     
-    
-    cdm$drug_exposure %>%
-      filter(drug_concept_id == 0) %>%
-      group_by(drug_source_value, drug_type_concept_id) %>%
-      tally() %>%
-      collect() %>%
-      arrange(desc(n)) %>%
-      minCountFilter("n", minimum_counts) %>% 
-      write_csv(paste0(output_folder, "/drug_source_values_id0_n.csv"))
+    if(drug_source$n_id0 > 0){
+      cdm$drug_exposure %>%
+        filter(drug_concept_id == 0) %>%
+        group_by(drug_source_value, drug_type_concept_id) %>%
+        tally() %>%
+        collect() %>%
+        arrange(desc(n)) %>%
+        minCountFilter("n", minimum_counts) %>% 
+        write_csv(paste0(output_folder, "/drug_source_values_id0_n.csv"))
+    }
     
     cdm$drug_exposure %>%
       filter(drug_concept_id != 0) %>%
@@ -507,3 +508,7 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
   
 
 }
+
+
+
+
