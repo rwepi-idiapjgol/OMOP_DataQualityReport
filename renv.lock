@@ -78,60 +78,37 @@
       "Maintainer": "Adam Black <black@ohdsi.org>",
       "Repository": "CRAN"
     },
-    "CodelistGenerator": {
-      "Package": "CodelistGenerator",
-      "Version": "3.4.1",
+    "CirceR": {
+      "Package": "CirceR",
+      "Version": "1.3.3",
       "Source": "Repository",
-      "Title": "Identify Relevant Clinical Codes and Evaluate Their Use",
-      "Authors@R": "c( person(\"Edward\", \"Burn\", email = \"edward.burn@ndorms.ox.ac.uk\",  role = c(\"aut\", \"cre\"), comment = c(ORCID = \"0000-0002-9286-1128\")), person(\"Marti\", \"Catala\", email = \"marti.catalasabate@ndorms.ox.ac.uk\",  role = c(\"ctb\"),  comment = c(ORCID = \"0000-0003-3308-9905\")), person(\"Xihang\", \"Chen\", email = \"xihang.chen@ndorms.ox.ac.uk\",  role = c(\"aut\"),  comment = c(ORCID = \"0009-0001-8112-8959\")), person(\"Nuria\", \"Mercade-Besora\", email = \"nuria.mercadebesora@ndorms.ox.ac.uk\",  role = c(\"aut\"), comment = c(ORCID = \"0009-0006-7948-3747\")), person(\"Mike\", \"Du\", email = \"mike.du@ndorms.ox.ac.uk\",  role = c(\"ctb\"),  comment = c(ORCID = \"0000-0002-9517-8834\")), person(\"Danielle\", \"Newby\", email = \"danielle.newby@ndorms.ox.ac.uk\",  role = c(\"ctb\"),  comment = c(ORCID = \"0000-0002-3001-1478\")), person( \"Marta\", \"Alcalde-Herraiz\", email = \"marta.alcaldeherraiz@ndorms.ox.ac.uk\",  role = c(\"ctb\"),  comment = c(ORCID = \"0009-0002-4405-1814\") ))",
-      "Description": "Generate a candidate code list for the Observational Medical Outcomes Partnership (OMOP) common data model based on string matching. For a given search strategy, a candidate code list will be returned.",
-      "License": "Apache License (>= 2)",
-      "Encoding": "UTF-8",
-      "RoxygenNote": "7.3.2",
+      "Type": "Package",
+      "Title": "Construct Cohort Inclusion and Restriction Criteria Expressions",
+      "Date": "2024-03-20",
+      "Authors@R": "c( person(\"Chris\", \"Knoll\", , \"cknoll@ohdsi.org\", role = c(\"aut\", \"cre\")), person(\"Martijn\", \"Schuemie\", role = c(\"aut\")) )",
+      "Maintainer": "Chris Knoll <cknoll@ohdsi.org>",
+      "Description": "Wraps the 'CIRCE' (<https://github.com/ohdsi/circe-be>) 'Java' library allowing cohort definition expressions to be edited and converted to  'Markdown' or 'SQL'.",
+      "License": "Apache License 2.0",
+      "URL": "https://ohdsi.github.io/CirceR/, https://github.com/OHDSI/CirceR/",
+      "BugReports": "https://github.com/OHDSI/CirceR/issues/",
+      "SystemRequirements": "Java (>= 8)",
       "Depends": [
-        "R (>= 4.1)"
+        "R (>= 3.5.0)"
       ],
       "Imports": [
-        "checkmate (>= 2.0.0)",
-        "DBI (>= 1.1.0)",
-        "dplyr (>= 1.1.0)",
-        "omopgenerics (>= 1.0.0)",
-        "rlang (>= 1.0.0)",
-        "glue (>= 1.5.0)",
-        "stringr (>= 1.4.0)",
-        "stringi (>= 1.8.1)",
-        "tidyr (>= 1.2.0)",
-        "cli (>= 3.1.0)",
-        "purrr",
-        "lubridate",
-        "PatientProfiles (>= 1.2.3)",
-        "vctrs",
-        "jsonlite"
+        "rJava",
+        "RJSONIO"
       ],
       "Suggests": [
-        "covr",
-        "duckdb",
-        "CDMConnector (>= 1.7.0)",
-        "visOmopResults (>= 1.0.0)",
+        "testthat",
         "knitr",
-        "rmarkdown",
-        "testthat (>= 3.0.0)",
-        "RPostgres",
-        "odbc",
-        "spelling",
-        "tibble",
-        "gt",
-        "flextable"
+        "rmarkdown"
       ],
-      "Config/testthat/edition": "3",
-      "Config/testthat/parallel": "true",
-      "VignetteBuilder": "knitr",
-      "URL": "https://darwin-eu.github.io/CodelistGenerator/",
-      "Language": "en-US",
-      "LazyData": "true",
       "NeedsCompilation": "no",
-      "Author": "Edward Burn [aut, cre] (<https://orcid.org/0000-0002-9286-1128>), Marti Catala [ctb] (<https://orcid.org/0000-0003-3308-9905>), Xihang Chen [aut] (<https://orcid.org/0009-0001-8112-8959>), Nuria Mercade-Besora [aut] (<https://orcid.org/0009-0006-7948-3747>), Mike Du [ctb] (<https://orcid.org/0000-0002-9517-8834>), Danielle Newby [ctb] (<https://orcid.org/0000-0002-3001-1478>), Marta Alcalde-Herraiz [ctb] (<https://orcid.org/0009-0002-4405-1814>)",
-      "Maintainer": "Edward Burn <edward.burn@ndorms.ox.ac.uk>",
+      "RoxygenNote": "7.3.1",
+      "Language": "en-US",
+      "Encoding": "UTF-8",
+      "Author": "Chris Knoll [aut, cre], Martijn Schuemie [aut]",
       "Repository": "CRAN"
     },
     "DBI": {
@@ -219,64 +196,6 @@
       "NeedsCompilation": "no",
       "Author": "Yihui Xie [aut], Joe Cheng [aut, cre], Xianying Tan [aut], JJ Allaire [ctb], Maximilian Girlich [ctb], Greg Freedman Ellis [ctb], Johannes Rauh [ctb], SpryMedia Limited [ctb, cph] (DataTables in htmlwidgets/lib), Brian Reavis [ctb, cph] (selectize.js in htmlwidgets/lib), Leon Gersen [ctb, cph] (noUiSlider in htmlwidgets/lib), Bartek Szopka [ctb, cph] (jquery.highlight.js in htmlwidgets/lib), Alex Pickering [ctb], William Holmes [ctb], Mikko Marttila [ctb], Andres Quintero [ctb], Stéphane Laurent [ctb], Posit Software, PBC [cph, fnd]",
       "Maintainer": "Joe Cheng <joe@posit.co>",
-      "Repository": "CRAN"
-    },
-    "DrugUtilisation": {
-      "Package": "DrugUtilisation",
-      "Version": "1.0.4",
-      "Source": "Repository",
-      "Title": "Summarise Patient-Level Drug Utilisation in Data Mapped to the OMOP Common Data Model",
-      "Authors@R": "c( person( \"Martí\", \"Català\", email = \"marti.catalasabate@ndorms.ox.ac.uk\",  role = c(\"aut\", \"cre\"), comment = c(ORCID = \"0000-0003-3308-9905\") ), person( \"Mike\", \"Du\", email = \"mike.du@ndorms.ox.ac.uk\", role = c(\"ctb\"),  comment = c(ORCID = \"0000-0002-9517-8834\") ), person( \"Yuchen\", \"Guo\", email = \"yuchen.guo@ndorms.ox.ac.uk\", role = c(\"aut\"),  comment = c(ORCID = \"0000-0002-0847-4855\") ), person( \"Kim\", \"Lopez-Guell\", , \"kim.lopez@spc.ox.ac.uk\", role = c(\"aut\"), comment = c(ORCID = \"0000-0002-8462-8668\") ), person( \"Edward\", \"Burn\", email = \"edward.burn@ndorms.ox.ac.uk\",  role = c(\"aut\"), comment = c(ORCID = \"0000-0002-9286-1128\") ),  person( \"Xintong\", \"Li\", email = \"xintong.li@ndorms.ox.ac.uk\", role = c(\"ctb\"), comment = c(ORCID = \"0000-0002-6872-5804\") ), person( \"Marta\", \"Alcalde-Herraiz\",  email = \"marta.alcaldeherraiz@ndorms.ox.ac.uk\",  role = c(\"ctb\"), comment = c(ORCID = \"0009-0002-4405-1814\") ), person( \"Nuria\", \"Mercade-Besora\", ,  email = \"nuria.mercadebesora@ndorms.ox.ac.uk\", role = c(\"aut\"),  comment = c(ORCID = \"0009-0006-7948-3747\") ), person( \"Xihang\", \"Chen\", ,  email = \"xihang.chen@ndorms.ox.ac.uk\", role = c(\"aut\"),  comment = c(ORCID = \"0009-0001-8112-8959\") ))",
-      "Description": "Summarise patient-level drug utilisation cohorts using data mapped  to the Observational Medical Outcomes Partnership (OMOP) common data model.  New users and prevalent users cohorts can be generated and their  characteristics, indication and drug use summarised.",
-      "License": "Apache License (>= 2)",
-      "Encoding": "UTF-8",
-      "RoxygenNote": "7.3.2",
-      "Suggests": [
-        "bit64",
-        "CohortSurvival",
-        "covr",
-        "DBI",
-        "duckdb",
-        "flextable",
-        "ggplot2",
-        "ggtext",
-        "gt",
-        "here",
-        "knitr",
-        "odbc",
-        "rmarkdown",
-        "RPostgres",
-        "scales",
-        "testthat (>= 3.1.5)",
-        "tibble",
-        "visOmopResults (>= 1.0.0)"
-      ],
-      "Config/testthat/edition": "3",
-      "Imports": [
-        "CDMConnector (>= 1.4.0)",
-        "cli",
-        "clock",
-        "CodelistGenerator (>= 3.1.0)",
-        "dplyr",
-        "glue",
-        "omopgenerics (>= 1.0.0)",
-        "PatientProfiles (>= 1.0.0)",
-        "purrr",
-        "rlang",
-        "stringr",
-        "tidyr"
-      ],
-      "Depends": [
-        "R (>= 4.1)"
-      ],
-      "LazyData": "true",
-      "URL": "https://darwin-eu.github.io/DrugUtilisation/",
-      "BugReports": "https://github.com/darwin-eu/DrugUtilisation/issues",
-      "Config/testthat/parallel": "true",
-      "VignetteBuilder": "knitr",
-      "NeedsCompilation": "no",
-      "Author": "Martí Català [aut, cre] (ORCID: <https://orcid.org/0000-0003-3308-9905>), Mike Du [ctb] (ORCID: <https://orcid.org/0000-0002-9517-8834>), Yuchen Guo [aut] (ORCID: <https://orcid.org/0000-0002-0847-4855>), Kim Lopez-Guell [aut] (ORCID: <https://orcid.org/0000-0002-8462-8668>), Edward Burn [aut] (ORCID: <https://orcid.org/0000-0002-9286-1128>), Xintong Li [ctb] (ORCID: <https://orcid.org/0000-0002-6872-5804>), Marta Alcalde-Herraiz [ctb] (ORCID: <https://orcid.org/0009-0002-4405-1814>), Nuria Mercade-Besora [aut] (ORCID: <https://orcid.org/0009-0006-7948-3747>), Xihang Chen [aut] (ORCID: <https://orcid.org/0009-0001-8112-8959>)",
-      "Maintainer": "Martí Català <marti.catalasabate@ndorms.ox.ac.uk>",
       "Repository": "CRAN"
     },
     "MASS": {
@@ -465,6 +384,25 @@
       "Description": "Provides color schemes for maps (and other graphics) designed by Cynthia Brewer as described at http://colorbrewer2.org.",
       "License": "Apache License 2.0",
       "NeedsCompilation": "no",
+      "Repository": "CRAN"
+    },
+    "RJSONIO": {
+      "Package": "RJSONIO",
+      "Version": "1.3-1.9",
+      "Source": "Repository",
+      "Title": "Serialize R Objects to JSON, JavaScript Object Notation",
+      "Description": "This is a package that allows conversion to and from  data in Javascript object notation (JSON) format. This allows R objects to be inserted into Javascript/ECMAScript/ActionScript code and allows R programmers to read and convert JSON content to R objects. This is an alternative to rjson package. Originally, that was too slow for converting large R objects to JSON and was not extensible.  rjson's performance is now similar to this package, and perhaps slightly faster in some cases. This package uses methods and is readily extensible by defining methods for different classes,  vectorized operations, and C code and callbacks to R functions for deserializing JSON objects to R.  The two packages intentionally share the same basic interface. This package (RJSONIO) has many additional options to allow customizing the generation and processing of JSON content. This package uses libjson rather than implementing yet another JSON parser. The aim is to support other general projects by building on their work, providing feedback and benefit from their ongoing development.",
+      "Note": "See http://www.json.org/JSON_checker/test.zip for tests. We now use code from the libjson project (http://libjson.sourceforge.net).",
+      "License": "BSD_3_clause + file LICENSE",
+      "Imports": [
+        "methods"
+      ],
+      "Authors@R": "c(person(\"CRAN Team\", role = c('ctb', 'cre'), email = \"CRAN@r-project.org\", comment = \"de facto maintainer since 2014\"), person(\"Duncan\", \"Temple Lang\", role = \"aut\", email = \"duncan@r-project.org\", comment = c(ORCID = \"0000-0003-0159-1546\")), person(\"Jonathan\", \"Wallace\", role = \"aut\", comment = \"aka ninja9578, author of included libjson sources\"))",
+      "Collate": "readJSON.R asVars.R isValid.R json.R simpleHandler.R stream.R",
+      "Biarch": "true",
+      "NeedsCompilation": "yes",
+      "Author": "CRAN Team [ctb, cre] (de facto maintainer since 2014), Duncan Temple Lang [aut] (<https://orcid.org/0000-0003-0159-1546>), Jonathan Wallace [aut] (aka ninja9578, author of included libjson sources)",
+      "Maintainer": "CRAN Team <CRAN@r-project.org>",
       "Repository": "CRAN"
     },
     "RPostgres": {
@@ -2346,51 +2284,6 @@
       "Maintainer": "Martí Català <marti.catalasabate@ndorms.ox.ac.uk>",
       "Repository": "CRAN"
     },
-    "openxlsx": {
-      "Package": "openxlsx",
-      "Version": "4.2.8",
-      "Source": "Repository",
-      "Type": "Package",
-      "Title": "Read, Write and Edit xlsx Files",
-      "Date": "2025-01-25",
-      "Authors@R": "c(person(given = \"Philipp\", family = \"Schauberger\", role = \"aut\", email = \"philipp@schauberger.co.at\"), person(given = \"Alexander\", family = \"Walker\", role = \"aut\", email = \"Alexander.Walker1989@gmail.com\"), person(given = \"Luca\", family = \"Braglia\", role = \"ctb\"), person(given = \"Joshua\", family = \"Sturm\", role = \"ctb\"), person(given = \"Jan Marvin\", family = \"Garbuszus\", role = c(\"ctb\", \"cre\"), email = \"jan.garbuszus@ruhr-uni-bochum.de\"), person(given = \"Jordan Mark\", family = \"Barbone\", role = \"ctb\", email = \"jmbarbone@gmail.com\", comment = c(ORCID = \"0000-0001-9788-3628\")), person(given = \"David\", family = \"Zimmermann\", role = \"ctb\", email = \"david_j_zimmermann@hotmail.com\"), person(given = \"Reinhold\", family = \"Kainhofer\", role = \"ctb\", email = \"reinhold@kainhofer.com\"))",
-      "Description": "Simplifies the creation of Excel .xlsx files by providing a high level interface to writing, styling and editing worksheets. Through the use of 'Rcpp', read/write times are comparable to the 'xlsx' and 'XLConnect' packages with the added benefit of removing the dependency on Java.",
-      "License": "MIT + file LICENSE",
-      "URL": "https://ycphs.github.io/openxlsx/index.html, https://github.com/ycphs/openxlsx",
-      "BugReports": "https://github.com/ycphs/openxlsx/issues",
-      "Depends": [
-        "R (>= 3.3.0)"
-      ],
-      "Imports": [
-        "grDevices",
-        "methods",
-        "Rcpp",
-        "stats",
-        "stringi",
-        "utils",
-        "zip"
-      ],
-      "Suggests": [
-        "curl",
-        "formula.tools",
-        "knitr",
-        "rmarkdown",
-        "testthat"
-      ],
-      "LinkingTo": [
-        "Rcpp"
-      ],
-      "VignetteBuilder": "knitr",
-      "Encoding": "UTF-8",
-      "Language": "en-US",
-      "RoxygenNote": "7.3.2",
-      "Collate": "'CommentClass.R' 'HyperlinkClass.R' 'RcppExports.R' 'class_definitions.R' 'StyleClass.R' 'WorkbookClass.R' 'asserts.R' 'baseXML.R' 'borderFunctions.R' 'build_workbook.R' 'chartsheet_class.R' 'conditional_formatting.R' 'data-fontSizeLookupTables.R' 'helperFunctions.R' 'loadWorkbook.R' 'onUnload.R' 'openXL.R' 'openxlsx-package.R' 'openxlsx.R' 'openxlsxCoerce.R' 'readWorkbook.R' 'setWindowSize.R' 'sheet_data_class.R' 'utils.R' 'workbook_column_widths.R' 'workbook_read_workbook.R' 'workbook_write_data.R' 'worksheet_class.R' 'wrappers.R' 'writeData.R' 'writeDataTable.R' 'writexlsx.R' 'zzz.R'",
-      "LazyData": "true",
-      "NeedsCompilation": "yes",
-      "Author": "Philipp Schauberger [aut], Alexander Walker [aut], Luca Braglia [ctb], Joshua Sturm [ctb], Jan Marvin Garbuszus [ctb, cre], Jordan Mark Barbone [ctb] (<https://orcid.org/0000-0001-9788-3628>), David Zimmermann [ctb], Reinhold Kainhofer [ctb]",
-      "Maintainer": "Jan Marvin Garbuszus <jan.garbuszus@ruhr-uni-bochum.de>",
-      "Repository": "CRAN"
-    },
     "pillar": {
       "Package": "pillar",
       "Version": "1.10.2",
@@ -2644,6 +2537,25 @@
       "Maintainer": "Hadley Wickham <hadley@posit.co>",
       "Repository": "RSPM"
     },
+    "rJava": {
+      "Package": "rJava",
+      "Version": "1.0-11",
+      "Source": "Repository",
+      "Title": "Low-Level R to Java Interface",
+      "Author": "Simon Urbanek <simon.urbanek@r-project.org>",
+      "Maintainer": "Simon Urbanek <simon.urbanek@r-project.org>",
+      "Depends": [
+        "R (>= 3.6.0)",
+        "methods"
+      ],
+      "Description": "Low-level interface to Java VM very much like .C/.Call and friends. Allows creation of objects, calling methods and accessing fields.",
+      "License": "LGPL-2.1",
+      "URL": "http://www.rforge.net/rJava/",
+      "SystemRequirements": "Java JDK 1.2 or higher (for JRI/REngine JDK 1.4 or higher), GNU make",
+      "BugReports": "https://github.com/s-u/rJava/issues",
+      "NeedsCompilation": "yes",
+      "Repository": "CRAN"
+    },
     "rappdirs": {
       "Package": "rappdirs",
       "Version": "0.3.3",
@@ -2832,7 +2744,7 @@
     },
     "rmarkdown": {
       "Package": "rmarkdown",
-      "Version": "2.29",
+      "Version": "2.30",
       "Source": "Repository",
       "Type": "Package",
       "Title": "Dynamic Documents for R",
@@ -2882,7 +2794,7 @@
       "RoxygenNote": "7.3.2",
       "SystemRequirements": "pandoc (>= 1.14) - http://pandoc.org",
       "NeedsCompilation": "no",
-      "Author": "JJ Allaire [aut], Yihui Xie [aut, cre] (<https://orcid.org/0000-0003-0645-5666>), Christophe Dervieux [aut] (<https://orcid.org/0000-0003-4474-2498>), Jonathan McPherson [aut], Javier Luraschi [aut], Kevin Ushey [aut], Aron Atkins [aut], Hadley Wickham [aut], Joe Cheng [aut], Winston Chang [aut], Richard Iannone [aut] (<https://orcid.org/0000-0003-3925-190X>), Andrew Dunning [ctb] (<https://orcid.org/0000-0003-0464-5036>), Atsushi Yasumoto [ctb, cph] (<https://orcid.org/0000-0002-8335-495X>, Number sections Lua filter), Barret Schloerke [ctb], Carson Sievert [ctb] (<https://orcid.org/0000-0002-4958-2844>), Devon Ryan [ctb] (<https://orcid.org/0000-0002-8549-0971>), Frederik Aust [ctb] (<https://orcid.org/0000-0003-4900-788X>), Jeff Allen [ctb], JooYoung Seo [ctb] (<https://orcid.org/0000-0002-4064-6012>), Malcolm Barrett [ctb], Rob Hyndman [ctb], Romain Lesur [ctb], Roy Storey [ctb], Ruben Arslan [ctb], Sergio Oller [ctb], Posit Software, PBC [cph, fnd], jQuery UI contributors [ctb, cph] (jQuery UI library; authors listed in inst/rmd/h/jqueryui/AUTHORS.txt), Mark Otto [ctb] (Bootstrap library), Jacob Thornton [ctb] (Bootstrap library), Bootstrap contributors [ctb] (Bootstrap library), Twitter, Inc [cph] (Bootstrap library), Alexander Farkas [ctb, cph] (html5shiv library), Scott Jehl [ctb, cph] (Respond.js library), Ivan Sagalaev [ctb, cph] (highlight.js library), Greg Franko [ctb, cph] (tocify library), John MacFarlane [ctb, cph] (Pandoc templates), Google, Inc. [ctb, cph] (ioslides library), Dave Raggett [ctb] (slidy library), W3C [cph] (slidy library), Dave Gandy [ctb, cph] (Font-Awesome), Ben Sperry [ctb] (Ionicons), Drifty [cph] (Ionicons), Aidan Lister [ctb, cph] (jQuery StickyTabs), Benct Philip Jonsson [ctb, cph] (pagebreak Lua filter), Albert Krewinkel [ctb, cph] (pagebreak Lua filter)",
+      "Author": "JJ Allaire [aut], Yihui Xie [aut, cre] (ORCID: <https://orcid.org/0000-0003-0645-5666>), Christophe Dervieux [aut] (ORCID: <https://orcid.org/0000-0003-4474-2498>), Jonathan McPherson [aut], Javier Luraschi [aut], Kevin Ushey [aut], Aron Atkins [aut], Hadley Wickham [aut], Joe Cheng [aut], Winston Chang [aut], Richard Iannone [aut] (ORCID: <https://orcid.org/0000-0003-3925-190X>), Andrew Dunning [ctb] (ORCID: <https://orcid.org/0000-0003-0464-5036>), Atsushi Yasumoto [ctb, cph] (ORCID: <https://orcid.org/0000-0002-8335-495X>, cph: Number sections Lua filter), Barret Schloerke [ctb], Carson Sievert [ctb] (ORCID: <https://orcid.org/0000-0002-4958-2844>), Devon Ryan [ctb] (ORCID: <https://orcid.org/0000-0002-8549-0971>), Frederik Aust [ctb] (ORCID: <https://orcid.org/0000-0003-4900-788X>), Jeff Allen [ctb], JooYoung Seo [ctb] (ORCID: <https://orcid.org/0000-0002-4064-6012>), Malcolm Barrett [ctb], Rob Hyndman [ctb], Romain Lesur [ctb], Roy Storey [ctb], Ruben Arslan [ctb], Sergio Oller [ctb], Posit Software, PBC [cph, fnd], jQuery UI contributors [ctb, cph] (jQuery UI library; authors listed in inst/rmd/h/jqueryui/AUTHORS.txt), Mark Otto [ctb] (Bootstrap library), Jacob Thornton [ctb] (Bootstrap library), Bootstrap contributors [ctb] (Bootstrap library), Twitter, Inc [cph] (Bootstrap library), Alexander Farkas [ctb, cph] (html5shiv library), Scott Jehl [ctb, cph] (Respond.js library), Ivan Sagalaev [ctb, cph] (highlight.js library), Greg Franko [ctb, cph] (tocify library), John MacFarlane [ctb, cph] (Pandoc templates), Google, Inc. [ctb, cph] (ioslides library), Dave Raggett [ctb] (slidy library), W3C [cph] (slidy library), Dave Gandy [ctb, cph] (Font-Awesome), Ben Sperry [ctb] (Ionicons), Drifty [cph] (Ionicons), Aidan Lister [ctb, cph] (jQuery StickyTabs), Benct Philip Jonsson [ctb, cph] (pagebreak Lua filter), Albert Krewinkel [ctb, cph] (pagebreak Lua filter)",
       "Maintainer": "Yihui Xie <xie@yihui.name>",
       "Repository": "CRAN"
     },
@@ -3630,33 +3542,6 @@
       "URL": "https://github.com/vubiostat/r-yaml/",
       "BugReports": "https://github.com/vubiostat/r-yaml/issues",
       "NeedsCompilation": "yes",
-      "Repository": "CRAN"
-    },
-    "zip": {
-      "Package": "zip",
-      "Version": "2.3.2",
-      "Source": "Repository",
-      "Title": "Cross-Platform 'zip' Compression",
-      "Authors@R": "c( person(\"Gábor\", \"Csárdi\", , \"csardi.gabor@gmail.com\", role = c(\"aut\", \"cre\")), person(\"Kuba\", \"Podgórski\", role = \"ctb\"), person(\"Rich\", \"Geldreich\", role = \"ctb\"), person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")) )",
-      "Description": "Cross-Platform 'zip' Compression Library. A replacement for the 'zip' function, that does not require any additional external tools on any platform.",
-      "License": "MIT + file LICENSE",
-      "URL": "https://github.com/r-lib/zip, https://r-lib.github.io/zip/",
-      "BugReports": "https://github.com/r-lib/zip/issues",
-      "Suggests": [
-        "covr",
-        "pillar",
-        "processx",
-        "R6",
-        "testthat",
-        "withr"
-      ],
-      "Config/Needs/website": "tidyverse/tidytemplate",
-      "Config/testthat/edition": "3",
-      "Encoding": "UTF-8",
-      "RoxygenNote": "7.2.3",
-      "NeedsCompilation": "yes",
-      "Author": "Gábor Csárdi [aut, cre], Kuba Podgórski [ctb], Rich Geldreich [ctb], Posit Software, PBC [cph, fnd]",
-      "Maintainer": "Gábor Csárdi <csardi.gabor@gmail.com>",
       "Repository": "CRAN"
     }
   }
