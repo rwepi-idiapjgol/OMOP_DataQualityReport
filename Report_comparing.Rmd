@@ -357,7 +357,7 @@ if ("visits" %in% names(data1)) {
 ```
 
 
-# Visits per year for the new instance 
+### Visits per year for the new instance 
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
 if ("visits" %in% names(data2)) {
@@ -828,6 +828,7 @@ if(!is.null(tbl_stc)) {
       )
 }
 ```
+
 
 
 
