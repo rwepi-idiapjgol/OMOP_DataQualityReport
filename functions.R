@@ -229,7 +229,7 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
   }
 
   #Source to concept map
-  if("source_to_concept_map" %in% listTables(db, schema = cdm_schema)){
+  if("source_to_concept_map" %in% CDMConnector::listTables(db, schema = cdm_schema)){
     nsm <- cdm$source_to_concept_map %>% tally() %>% pull(n)
   }else{
     nsm = 0
