@@ -4,22 +4,29 @@ minCountFilter <- function(x, col_names, minCounts) {
   }
 }
 
-get_counts <- function(cdm, tbl_name) {
-  tryCatch(
-    {
-      cdm[[tbl_name]] %>%
-        summarise(
-          n_rec = n(),
-          n_sub = n_distinct("person_id")
-        ) %>%
-        mutate(table = tbl_name) %>%
-        collect()
-    },
-    error = function(e) {
-      message("Table not found or empty: ", tbl_name)
-      tibble(n_rec = 0, n_sub = 0, table = tbl_name)
-    }
-  )
+get_counts <- function(cdm, db, cdmSchema, tbl_name) {
+  if (!tbl_name %in% CDMConnector::listTables(db, cdmSchema) ) {
+    tibble(n_rec = 0L, n_sub = 0L, table = tbl_name)
+  }else{
+    cdm[[tbl_name]] |>
+      summarise(
+        n_rec = n(),
+        n_sub = n_distinct(person_id)
+      ) |>
+      mutate(table = tbl_name) |>
+      collect()
+  }
+}
+
+get_recs <- function(cdm, db, cdmSchema, tbl_name) {
+  if (!tbl_name %in% CDMConnector::listTables(db, cdmSchema) ) {
+    tibble(n_rec = 0L, table = tbl_name)
+  }else{
+    cdm[[tbl_name]] |>
+      summarise(n_rec = n()) |>
+      mutate(table = tbl_name) |>
+      collect()
+  }
 }
 
 
@@ -44,7 +51,7 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
   
   # mother_table_name <- "pregnancy_episode"
   # minimum_counts <- 5
-  table_stem <- "omop_checks_"
+  table_stem <- "omop_checks2_"
   if(!exists("minimum_counts")){
     minimum_counts = 5
   }
@@ -96,6 +103,13 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
   # Snapshot
   CDMConnector::snapshot(cdm) %>%
     write_csv(paste0(output_folder, "/cdm_snapshot.csv"))
+  
+  #Count records
+  rec_counts <- bind_rows(
+    get_recs(cdm, db, cdm_schema ,"death"),
+    get_recs(cdm, db, cdm_schema ,"fact_relationship"),
+    get_recs(cdm, db, cdm_schema ,"source_to_concept_map")
+  )
 
   # Person counts
   person_db <- cdm$person %>%
@@ -137,8 +151,8 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
     write_csv(paste0(output_folder, "/observation_period.csv"))
 
   # death
-  nd <- cdm$death %>% tally() %>% pull(n) 
-  
+  nd <- rec_counts %>% filter(table == "death") %>% pull(n_rec)
+
   if(nd > 0){
     cdm$death %>%
       group_by(year(death_date)) %>%
@@ -150,21 +164,37 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
   }else{
     message("Death table is empty.")
   }
+  
+  #Ethnicity
+  ethnicity_concepts <- cdm$person |> 
+    distinct(ethnicity_concept_id) |> 
+    collect()
+  
+  if (!all(ethnicity_concepts$ethnicity_concept_id == 0)) {
+    cdm$person |>
+      group_by(ethnicity_concept_id) |>
+      tally() |>
+      left_join(cdm$concept |> select(ethinicity = concept_name, ethnicity_concept_id = concept_id)) |> 
+      select(ethinicity, n) |> 
+      collect()%>%
+      minCountFilter("n", minimum_counts) %>% 
+      write_csv(paste0(output_folder, "/obs_ethnicity.csv"))
+  }
 
   #Counts per table
   table_counts <- bind_rows(
-    get_counts(cdm, "condition_occurrence"),
-    get_counts(cdm, "drug_exposure"),
-    get_counts(cdm, "visit_occurrence"),
-    get_counts(cdm, "observation"),
-    get_counts(cdm, "measurement"),
-    get_counts(cdm, "procedure_occurrence"),
-    get_counts(cdm, "device_exposure")
+    get_counts(cdm,db, cdm_schema, "condition_occurrence"),
+    get_counts(cdm,db, cdm_schema, "drug_exposure"),
+    get_counts(cdm,db, cdm_schema, "visit_occurrence"),
+    get_counts(cdm,db, cdm_schema, "observation"),
+    get_counts(cdm,db, cdm_schema, "measurement"),
+    get_counts(cdm,db, cdm_schema, "procedure_occurrence"),
+    get_counts(cdm,db, cdm_schema, "device_exposure")
   ) 
   
   table_counts %>%
     write_csv(paste0(output_folder, "/table_counts.csv"))
-
+  
   # # NAs en las tablas
   # table_names <- c("condition_occurrence", "drug_exposure", "visit_occurrence", "observation",
   #                  "measurement", "procedure_occurrence", "device_exposure")
@@ -193,8 +223,8 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
   
   
   # Fact_relationship
-  nfr <- cdm$fact_relationship %>%tally() %>% pull(n)
-  
+  nfr <- rec_counts %>% filter(table == "fact_relationship") %>% pull(n_rec)
+
   if (nfr > 0) {
     cdm$fact_relationship %>%
       group_by(relationship_concept_id) %>%
@@ -229,12 +259,8 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
   }
 
   #Source to concept map
-  if("source_to_concept_map" %in% CDMConnector::listTables(db, schema = cdm_schema)){
-    nsm <- cdm$source_to_concept_map %>% tally() %>% pull(n)
-  }else{
-    nsm = 0
-  }
-  
+  nsm <- rec_counts %>% filter(table == "source_to_concept_map") %>% pull(n_rec)
+
   if (nsm > 0) {
     cdm$source_to_concept_map %>%
       collect() %>%
@@ -243,30 +269,30 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
     message("Source_to_concept_map table is empty.")
   }
 
-  # Observations: source codes and mapping
+  # Observations: source codes and mapping -----
   n_obs <- table_counts %>% filter(table == "observation") %>% pull(n_sub)
-  
+
   if(n_obs > 0){
-    
     # Observations: nationality
-    n_natio <- cdm$observation %>% filter(observation_concept_id == 4087925) %>% tally() %>% pull(n)
-    
-    if (n_natio > 0){
-      cdm$person %>%
-        select(person_id) %>%
-        left_join(
-          cdm$observation %>%
-            filter(observation_concept_id == 4087925) %>%  #Ethnicity concept_id in SIDIAP
-            select(person_id, nationality = value_as_string),
-          by = "person_id"
-        ) %>%
-        group_by(nationality) %>%
-        tally() %>%
-        collect() %>%
-        minCountFilter("n", minimum_counts) %>% 
-        write_csv(paste0(output_folder, "/obs_nationality.csv"))
-    }else{
-      message("Nationality observations were not captured.")
+    if (all(ethnicity_concepts$ethnicity_concept_id == 0)){
+      n_natio <- cdm$observation %>% filter(observation_concept_id == 4087925) %>% tally() %>% pull(n)
+      if (n_natio > 0){
+        cdm$person %>%
+          select(person_id) %>%
+          left_join(
+            cdm$observation %>%
+              filter(observation_concept_id == 4087925) %>%  #Ethnicity concept_id in SIDIAP
+              select(person_id, nationality = value_as_string),
+            by = "person_id"
+          ) %>%
+          group_by(nationality) %>%
+          tally() %>%
+          collect() %>%
+          minCountFilter("n", minimum_counts) %>% 
+          write_csv(paste0(output_folder, "/obs_nationality.csv"))
+      }else{
+        message("Nationality observations were not captured.")
+      }
     }
     
     #observation concepts
@@ -284,27 +310,29 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
           select(source_concept_id = concept_id_1, concept_relationship.target_concept_id = concept_id_2),
         by = "source_concept_id"
       ) 
+    
+    if(nsm > 0){
+      obs_query %>%
+        left_join(
+          cdm$source_to_concept_map %>%
+            filter(source_code == "Maps to") %>%
+            select(source_code, source_to_concept_map.target_concept_id = target_concept_id),
+          by=c("observation_source_value"= "source_code")
+        ) %>%
+        collect() %>%
+        minCountFilter("n", minimum_counts) %>% 
+        write_csv(paste0(output_folder, "/observation_source_values.csv"))
+    }else{
+      obs_query %>%
+        collect() %>%
+        minCountFilter("n", minimum_counts) %>% 
+        write_csv(paste0(output_folder, "/observation_source_values.csv"))
+    }
+ 
   }else{
     message("Observation table is empty.")
   }
   
-  if(nsm > 0){
-    obs_query %>%
-      left_join(
-        cdm$source_to_concept_map %>%
-          filter(source_code == "Maps to") %>%
-          select(source_code, source_to_concept_map.target_concept_id = target_concept_id),
-        by=c("observation_source_value"= "source_code")
-      ) %>%
-      collect() %>%
-      minCountFilter("n", minimum_counts) %>% 
-      write_csv(paste0(output_folder, "/observation_source_values.csv"))
-  }else{
-    obs_query %>%
-      collect() %>%
-      minCountFilter("n", minimum_counts) %>% 
-      write_csv(paste0(output_folder, "/observation_source_values.csv"))
-  }
 
   #Procedures: source vocabularies records
   np <- table_counts %>% filter(table == "procedure_occurrence") %>% pull(n_sub)
@@ -325,7 +353,6 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
   }else{
     message("Procedure_occurrence table is empty.")
   }
-
 
   # measurements
   nmeas <- table_counts %>% filter(table == "measurement") %>% pull(n_sub)
@@ -443,7 +470,6 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
     message("Drug_exposure table is empty.")
   }
 
-
   # Cancer sex -- check female/male
   cancer_concepts <- CDMConnector::readCohortSet(path = here::here("cancerSexCohorts"))
 
@@ -508,16 +534,6 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
       minCountFilter("n", minimum_counts) %>% 
       write_csv(paste0(output_folder, "/conditions_medications.csv"))
   }
-  
+
   CDMConnector::cdmDisconnect(cdm)
-  
-
 }
-
-
-
-
-
-
-
-
