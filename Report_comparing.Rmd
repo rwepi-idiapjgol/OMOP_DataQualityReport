@@ -539,31 +539,50 @@ if ("observation_source_values" %in% int_tables) {
 ```
 
 
-#### Nationality
+#### Ethnicity or Nationality
 
 
 ```{r,  echo=FALSE}
 if ("obs_nationality" %in% all_tables) {
-
-data1$obs_nationality |>  
-  bind_rows(data2$obs_nationality) |>
-  mutate(n = ifelse(n < 5, "<5", as.character(n))) |> 
-  pivot_wider(
-    id_cols     = nationality,
-    names_from  = db,
-    values_from = n,
-    names_prefix = "n_"
-  ) %>% 
-  datatable(
-    options = list(
-            scrollX = TRUE,
-            scrollY = "400px",
-            pageLength = 10000,
-            dom = 't'
-          )
-  )
-
+  data1$obs_nationality |>  
+    bind_rows(data2$obs_nationality) |>
+    mutate(n = ifelse(n < 5, "<5", as.character(n))) |> 
+    pivot_wider(
+      id_cols     = nationality,
+      names_from  = db,
+      values_from = n,
+      names_prefix = "n_"
+    ) %>% 
+    datatable(
+      options = list(
+              scrollX = TRUE,
+              scrollY = "400px",
+              pageLength = 10000,
+              dom = 't'
+            )
+    )
 }
+
+if ("obs_ethnicity" %in% all_tables) {
+  data1$obs_ethnicity |>  
+    bind_rows(data2$obs_ethnicity) |>
+    mutate(n = ifelse(n < 5, "<5", as.character(n))) |> 
+    pivot_wider(
+      id_cols     = ethnicity,
+      names_from  = db,
+      values_from = n,
+      names_prefix = "n_"
+    ) %>% 
+    datatable(
+      options = list(
+              scrollX = TRUE,
+              scrollY = "400px",
+              pageLength = 10000,
+              dom = 't'
+            )
+    )
+}
+
 
 ```
 
