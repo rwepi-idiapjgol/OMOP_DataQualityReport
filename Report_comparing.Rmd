@@ -17,6 +17,12 @@ editor_options:
     wrap: 72
 ---
 
+```{r, include=FALSE, eval=FALSE}
+#Execute this manually
+renv::activate()
+renv::restore()
+```
+
 ```{r setup, include=FALSE} 
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 ```
@@ -29,11 +35,6 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 You can write here any important issues you have encountered when reviewing the data.
 
 ---
-```{r, include=FALSE, eval=FALSE}
-renv::activate()
-renv::restore()
-```
-
 
 ```{r library, include=FALSE}
 library(dplyr)
