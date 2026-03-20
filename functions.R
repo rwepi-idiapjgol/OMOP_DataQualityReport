@@ -229,7 +229,11 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
   }
 
   #Source to concept map
-  nsm <- cdm$source_to_concept_map %>% tally() %>% pull(n)
+  if("source_to_concept_map" %in% listTables(db, schema = cdm_schema)){
+    nsm <- cdm$source_to_concept_map %>% tally() %>% pull(n)
+  }else{
+    nsm = 0
+  }
   
   if (nsm > 0) {
     cdm$source_to_concept_map %>%
@@ -416,6 +420,7 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
         filter(drug_concept_id == 0) %>%
         group_by(drug_source_value, drug_type_concept_id) %>%
         tally() %>%
+        mutate(drug_source_value = as.character(drug_source_value)) |> 
         collect() %>%
         arrange(desc(n)) %>%
         minCountFilter("n", minimum_counts) %>% 
@@ -508,6 +513,10 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
   
 
 }
+
+
+
+
 
 
 
