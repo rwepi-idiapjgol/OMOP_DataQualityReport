@@ -29,6 +29,11 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE)
 You can write here any important issues you have encountered when reviewing the data.
 
 ---
+```{r, include=FALSE, eval=FALSE}
+renv::activate()
+renv::restore()
+```
+
 
 ```{r library, include=FALSE}
 library(dplyr)
@@ -44,35 +49,36 @@ library(DT)
 ### Data release
 
 ```{r include=FALSE}
-# Compare previous database version with new one
+# Compare previous database version with new one (database1 must be the old version for consistency in reporting outcomes)
 database1 = "omop_old1"
 database2 = "omop_new1"
 
-#Default values
+#Output folders
+path1 = file.path(here::here(), database1)
+path2 = file.path(here::here(), database2)
+
+#Set to TRUE if you want to RE-RUN the code in the database
 runCheckDB1 = FALSE
 runCheckDB2 = FALSE
 
+
 ## Database 1 ------------------------------------------------------------------
-path1 = file.path(here::here(), database1)
-if(dir.exists(path1)){
+if(!runCheckDB1 & dir.exists(path1)){
   csv_files1 <- list.files(path = path1, pattern = "\\.csv", full.names = TRUE)
-} 
-#Generate results
-if(!dir.exists(path1)){
-  runCheckDB1 = TRUE
-} else if(is_empty(csv_files1)){
+  if(is_empty(csv_files1)){
+     runCheckDB1 = TRUE
+  }
+} else{
   runCheckDB1 = TRUE
 }
 
 ## Database 2 ------------------------------------------------------------------
-path2 = file.path(here::here(), database2)
-if(dir.exists(path2)){
+if(!runCheckDB2 & dir.exists(path2)){
   csv_files2 <- list.files(path = path2, pattern = "\\.csv", full.names = TRUE)
-}
-#Generate results
-if(!dir.exists(path2)){
-  runCheckDB2 = TRUE
-} else if(is_empty(csv_files2)){
+  if(is_empty(csv_files2)){
+     runCheckDB2 = TRUE
+  }
+} else{
   runCheckDB2 = TRUE
 }
 
@@ -82,41 +88,43 @@ if(!dir.exists(path2)){
 
 ```{r, include=FALSE}
 # Run result generation if did not found csv files
-mother_table_name <- "pregnancy_episode" #set to NULL if does not exist
-# mother_table_schema <- "..."
 minimum_counts <- 5
+
+# mother_table_name <- "pregnancy" #set to NULL if does not exist
+# mother_table_schema <- "..."
 
 driver = RPostgres::Postgres()   #change it based on DBMS
 
 if(any(c(runCheckDB1, runCheckDB2))){
+  source(here::here("functions.R")) # load functions
+}
 
-  # load functions
-  source(here::here("functions.R"))
+# Get results previous database instance
+if(runCheckDB1){
+  getChecksData(dbms = driver,
+                server_dbi = Sys.getenv("DB_SERVER_OLD"),
+                port = Sys.getenv("DB_PORT_OLD"),
+                host = Sys.getenv("DB_HOST_OLD"),
+                user = Sys.getenv("DB_USER_OLD"),
+                password = Sys.getenv("DB_PASSWORD_OLD"),
+                cdm_schema = "...",
+                write_schema = "...",
+                output_folder = path1)
+  csv_files1 <- list.files(path = path1, pattern = "\\.csv", full.names = TRUE)
+}
 
-  if(runCheckDB1){
-    # Get results previous database instance
-    getChecksData(dbms = driver,
-                  server_dbi = Sys.getenv("DB_SERVER"),
-                  port = Sys.getenv("DB_PORT"),
-                  host = Sys.getenv("DB_HOST"),
-                  user = Sys.getenv("DB_USER"),
-                  password = Sys.getenv("DB_PASSWORD"),
-                  cdm_schema = "...",
-                  write_schema = "...",
-                  output_folder = path1)
-  }
-  if(runCheckDB2){
-    # Get results new database instance
-    getChecksData(dbms = driver,
-                  server_dbi = Sys.getenv("DB_SERVER_NEW"),
-                  port = Sys.getenv("DB_PORT_NEW"),
-                  host = Sys.getenv("DB_HOST_NEW"),
-                  user = Sys.getenv("DB_USER_NEW"),
-                  password = Sys.getenv("DB_PASSWORD_NEW"),
-                  cdm_schema = "...",
-                  write_schema = "...",
-                  output_folder = path2)
-  }
+# Get results new database instance
+if(runCheckDB2){
+  getChecksData(dbms = driver,
+                server_dbi = Sys.getenv("DB_SERVER_NEW"),
+                port = Sys.getenv("DB_PORT_NEW"),
+                host = Sys.getenv("DB_HOST_NEW"),
+                user = Sys.getenv("DB_USER_NEW"),
+                password = Sys.getenv("DB_PASSWORD_NEW"),
+                cdm_schema = "...",
+                write_schema = "...",
+                output_folder = path2)
+  csv_files2 <- list.files(path = path2, pattern = "\\.csv", full.names = TRUE)
 }
 ```
 
@@ -130,6 +138,7 @@ for (file in csv_files1) {
     mutate(db=database1)
   data1[[table_name]] <- df
 }
+
 #Load results already generated
 data2 <- list()
 for (file in csv_files2) {
@@ -139,15 +148,16 @@ for (file in csv_files2) {
   data2[[table_name2]] <- df2
 }
 
+#List of output files
+all_tables <- union(names(data1), names(data2))
+int_tables <- intersect(names(data1), names(data2))
 ```
 
 ```{r data_release, echo=FALSE}
-if ("cdm_snapshot" %in% names(data1)) {
-  df=data1$cdm_snapshot %>%
-    mutate(cdm_inst=database1)%>%
-    add_row(data2$cdm_snapshot%>%
-    mutate(cdm_inst=database2))%>%
-    select(cdm=cdm_name,inst=cdm_inst, version=cdm_version, release_date=cdm_release_date,
+if ("cdm_snapshot" %in% all_tables) {
+  df = data1$cdm_snapshot %>%
+    bind_rows(data2$cdm_snapshot)%>%
+    select(cdm=cdm_name,inst=db, version=cdm_version, release_date=cdm_release_date,
            voc_version=vocabulary_version, person_count, lastest_obs = 
              latest_observation_period_end_date, snapshot=snapshot_date)
   kable(df)
@@ -158,34 +168,38 @@ if ("cdm_snapshot" %in% names(data1)) {
 ### Birth and death dates
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("birth" %in% names(data1)) {
+if ("birth" %in% all_tables) {
   data1$birth%>%
-    add_row(data2$birth)%>%
-    ggplot(aes(x=year_of_birth, y=n, color=db, fill=db))+
-    facet_grid(db ~ sex)+
-    geom_bar(stat="identity")+
+    bind_rows(data2$birth)%>%
+    ggplot(aes(x=year_of_birth, y=n,  fill=db))+
+    geom_bar(stat = "identity", position = "dodge") +  
+    facet_wrap(~sex) +
+    # geom_bar(stat="identity")+
+    # facet_grid(db ~ sex)+
     labs(subtitle = "Number of births over time, stratified by sex")
 }
 ```
 
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("death" %in% names(data1)) {
+if ("death" %in% all_tables) {
   data1$death %>%
-    add_row(data2$death)%>%
+    bind_rows(data2$death)%>%
     ggplot(aes(x=death_date, y=n,color=db, fill=db))+
     geom_bar(stat="identity", position=position_dodge())+
     labs(subtitle = "Number of deaths per year")
 }
 ```
 
+
+
 ### Observation periods
+
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("observation_period" %in% names(data1)) {
-  data1$observation_period%>%
+if ("observation_period" %in% all_tables) {
+  data1$observation_period %>%
+    bind_rows(data2$observation_period) %>%
     gather("obs_date", "n", c(-1,-4))%>%
-    add_row(data2$observation_period%>%
-    gather("obs_date", "n", c(-1,-4)))%>%
     mutate(date=as.Date(date))%>%
     mutate(obs_date = factor(obs_date, levels = c("n_start","n_end")))%>%
     ggplot(aes(x=date, y=n, color=obs_date, fill=obs_date))+
@@ -199,13 +213,11 @@ if ("observation_period" %in% names(data1)) {
 ```
 
 
-
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("observation_period" %in% names(data1)) {
-  data1$observation_period%>%
+if ("observation_period" %in% all_tables) {
+  data1$observation_period %>%
+    bind_rows(data2$observation_period) %>%
     gather("obs_date", "n", c(-1,-4))%>%
-    add_row(data2$observation_period%>%
-    gather("obs_date", "n", c(-1,-4)))%>%
     mutate(date=as.Date(date))%>%
     mutate(obs_date = factor(obs_date, levels = c("n_start","n_end")))%>%
     group_by(db)%>%
@@ -225,11 +237,10 @@ if ("observation_period" %in% names(data1)) {
 
 ### Pregnancies
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("pregnancies" %in% names(data1)) {
+if ("pregnancies" %in% all_tables) {
   data1$pregnancies%>%
+    bind_rows(data2$pregnancies) %>%
     gather("pregnancy_date", "n", c(-1,-4))%>%
-    add_row(data2$pregnancies %>%
-    gather("pregnancy_date", "n", c(-1,-4)))%>%
     mutate(date=as.Date(date))%>%
     mutate(pregnancy_date = factor(pregnancy_date, levels = c("n_start","n_end")))%>%
     ggplot(aes(x=date, y=n, color=pregnancy_date, fill=pregnancy_date))+
@@ -245,9 +256,9 @@ if ("pregnancies" %in% names(data1)) {
 ### Fact relationship
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("fact_relationship" %in% names(data1)) {
+if ("fact_relationship" %in% all_tables) {
   data1$fact_relationship%>%
-    add_row(data2$fact_relationship)%>%
+    bind_rows(data2$fact_relationship)%>%
     group_by(db, concept_name) %>% 
     ggplot(aes(x=concept_name, y=n, color=db, fill=db))+
     geom_bar(stat="identity", position = position_dodge(width = 0.5), width = 0.5)+
@@ -261,10 +272,10 @@ if ("fact_relationship" %in% names(data1)) {
 
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("table_counts" %in% names(data1)) {
+if ("table_counts" %in% all_tables) {
   
   data1$table_counts%>%
-    add_row(data2$table_counts)%>%
+    bind_rows(data2$table_counts)%>%
     group_by(db, table) %>% 
     ggplot(aes(x=table, y=n_rec, color=table, fill=table))+
     geom_bar(
@@ -289,9 +300,9 @@ if ("table_counts" %in% names(data1)) {
 ```
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("table_counts" %in% names(data1)) {
+if ("table_counts" %in% all_tables) {
   data1$table_counts%>%
-    add_row(data2$table_counts)%>%
+    bind_rows(data2$table_counts)%>%
     group_by(db, table) %>% 
     ggplot(aes(x=table, y=n_sub, color=table, fill=table))+
     geom_bar(
@@ -319,9 +330,9 @@ if ("table_counts" %in% names(data1)) {
 
 ### Visits
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("visits" %in% names(data1)) {
+if ("visits" %in% all_tables) {
   data1$visits%>%
-    add_row(data2$visits)%>%
+    bind_rows(data2$visits)%>%
     group_by(db, type_visit) %>% 
     summarise(mean_visits_per_year = as.integer(mean(n)), .groups = "keep") %>% 
     ggplot(aes(x=type_visit, y=mean_visits_per_year, color=db, fill=db))+
@@ -339,19 +350,6 @@ if ("visits" %in% names(data1)) {
     ) +
     labs((subtitle  ="Mean number of different type of visits in one year"))
   
-  # data1$visits%>%
-  #   add_row(data2$visits)%>%
-  #   group_by(db, type_visit) %>%   
-  #   ggplot(aes(x = date_visit, y = n, color = type_visit)) +  
-  #   geom_line(size = 1.2) +
-  #   geom_point(size = 2) +
-  #   facet_grid(db ~ .) +
-  #   labs(
-  #     x = "Year",
-  #     y = "Mean visits per person",
-  #     title = "Trend in Average Visits per Year"
-  #   ) +
-  #   theme_minimal()
 }
 
 ```
@@ -360,27 +358,27 @@ if ("visits" %in% names(data1)) {
 ### Visits per year for the new instance 
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("visits" %in% names(data2)) {
-  data2$visits %>%
-    ggplot(aes(x = factor(date_visit), y = n, color = type_visit, fill = type_visit)) +
-    geom_bar(stat = "identity", position = position_dodge(width = 0.4), width = 0.6) +
-    theme_minimal()+
+if ("visits" %in% all_tables) {
+  data1$visits |> 
+    bind_rows(data2$visits) |>
+    ggplot(aes(x = factor(date_visit), y = n, color = db, fill = db)) +
+    geom_bar(stat = "identity", position = position_dodge(width = 0.7), width = 0.6) +
+    theme_minimal() +
     theme(
       axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-      strip.text = element_text(face = "bold")
-    )+
+      strip.text  = element_text(face = "bold")
+    ) +
     facet_wrap(~ type_visit, ncol = 2, scales = "free_y") +
-    labs(subtitle  ="Number of visits per year for the new instance")
+    labs(subtitle = "Number of visits per year")
 }
-
 ```
 
 
 ### Procedures
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("procedures" %in% names(data1)) {
+if ("procedures" %in% all_tables) {
   data1$procedures %>%
-    add_row(data2$procedures) %>%
+    bind_rows(data2$procedures) %>%
     ggplot(aes(x=vocabulary_id, y=n_total_voc, color=vocabulary_id, fill=vocabulary_id))+
     geom_bar(stat="identity")+
     geom_text(aes(label = n_total_voc), vjust = -0.1, size = 3)+
@@ -396,48 +394,64 @@ if ("procedures" %in% names(data1)) {
 
 Measurement concepts that have changed (removed / added) or have decreased the records/subjects in the new instance
 
+
 ```{r,  fig.width=10, fig.height=4, echo=FALSE}
-if ("measurements_concepts" %in% names(data1)) {
-  data_mes <- data1$measurements_concepts %>%
-    rename(n_rec_old = n_rec, n_sub_old=n_sub, concept_name_old = concept_name) %>% 
-    select(-db) %>% 
-    full_join(
-      data2$measurements_concepts %>% 
-        rename(n_rec_new = n_rec, n_sub_new=n_sub, concept_name_new = concept_name) %>% 
-        select( -db), 
-      by =c("measurement_concept_id")
-    ) %>% 
-    mutate(n_rec_dif = n_rec_new - n_rec_old, n_sub_dif = n_sub_new - n_sub_old ) 
-  
-  data_mes %>%
-    filter(is.na(n_rec_new)) %>% 
-    select(measurement_concept_id, concept_name = concept_name_old, n_rec_old, n_sub_old, n_rec_new, n_sub_new) %>% 
-    add_row(data_mes %>%
-              filter(is.na(n_rec_old)) %>% 
-              select(measurement_concept_id, concept_name = concept_name_new, n_rec_old, n_sub_old, n_rec_new, n_sub_new)
-            ) %>% 
-    add_row(data_mes %>%
-              filter(n_rec_dif < 0 | n_sub_dif <0) %>% 
-              select(measurement_concept_id, concept_name = concept_name_new, n_rec_old, n_sub_old, n_rec_new, n_sub_new)
-            ) %>% 
-    rename(meas_concept_id = measurement_concept_id) %>% 
-    mutate(issue = ifelse(is.na(n_rec_new), "removed", ifelse(is.na(n_rec_old), "added", "decreased n"))) %>% 
-    datatable(
-      filter= "top",
-      options = list(
-              scrollX = TRUE,     
-              scrollY = "400px",  
-              pageLength = 100,   
-              dom = 't'           
-            ))%>%
-    formatStyle(
-      'issue',
-      target = 'row',
-      backgroundColor = styleEqual(
-        c("removed", "added", "decreased n"), 
-        c("lightpink",  "lightgreen", "orange")
-      )
+if ("measurements_concepts" %in% all_tables) {
+  data_mes <- bind_rows(
+      data1$measurements_concepts,
+      data2$measurements_concepts
+    ) |>
+    mutate(db = ifelse(db == database1, "old", "new")) |> 
+    pivot_wider(
+      id_cols     = measurement_concept_id,
+      names_from  = db,
+      values_from = c(n_rec, n_sub, concept_name)
     )
+  
+  if("n_rec_old" %in% names(data_mes) & "n_rec_new" %in% names(data_mes)){
+    data_mes <- data_mes %>% 
+      mutate(n_rec_dif = n_rec_new - n_rec_old, n_sub_dif = n_sub_new - n_sub_old )
+    
+    data_mes %>%
+      filter(is.na(n_rec_new)) %>% 
+      select(measurement_concept_id, concept_name = concept_name_old, n_rec_old, n_sub_old, n_rec_new, n_sub_new) %>% 
+      bind_rows(data_mes %>%
+                filter(is.na(n_rec_old)) %>% 
+                select(measurement_concept_id, concept_name = concept_name_new, n_rec_old, n_sub_old, n_rec_new, n_sub_new)
+              ) %>% 
+      bind_rows(data_mes %>%
+                filter(n_rec_dif < 0 | n_sub_dif <0) %>% 
+                select(measurement_concept_id, concept_name = concept_name_new, n_rec_old, n_sub_old, n_rec_new, n_sub_new)
+              ) %>% 
+      rename(meas_concept_id = measurement_concept_id) %>% 
+      mutate(issue = ifelse(is.na(n_rec_new), "removed", ifelse(is.na(n_rec_old), "added", "decreased n"))) %>% 
+      datatable(
+        filter= "top",
+        options = list(
+                scrollX = TRUE,     
+                scrollY = "400px",  
+                pageLength = 100,   
+                dom = 't'           
+              ))%>%
+      formatStyle(
+        'issue',
+        target = 'row',
+        backgroundColor = styleEqual(
+          c("removed", "added", "decreased n"), 
+          c("lightpink",  "lightgreen", "orange")
+        )
+      )
+  }else{
+    data_mes |> 
+      datatable(
+        filter= "top",
+        options = list(
+                scrollX = TRUE,     
+                scrollY = "400px",  
+                pageLength = 100,   
+                dom = 't'           
+              ))
+  }
     
 }
 
@@ -453,7 +467,7 @@ if ("measurements_concepts" %in% names(data1)) {
 Observation concepts that have changed (removed / added) or have decreased the records/subjects in the new instance
 
 ```{r,  fig.width=8, fig.height=4, echo=FALSE}
-if ("observation_source_values" %in% names(data1)) {
+if ("observation_source_values" %in% int_tables) {
   diff_in_data2 <- data2$observation_source_values %>%
     anti_join(data1$observation_source_values, by = "observation_source_value")
   
@@ -461,13 +475,13 @@ if ("observation_source_values" %in% names(data1)) {
       select(observation_source_value, source_concept_name, obs_concept_id, n_new =n) %>% 
       mutate(n_old = NA, issue = "added") %>% 
       arrange(desc(n_new)) %>% 
-    add_row(data1$observation_source_values %>%
+    bind_rows(data1$observation_source_values %>%
       anti_join(data2$observation_source_values, by = "observation_source_value") %>% 
       select(observation_source_value, source_concept_name, obs_concept_id, n_old =n) %>% 
       mutate(n_new = NA, issue = "removed") %>% 
       arrange(desc(n_old)) 
     ) %>% 
-    add_row(
+    bind_rows(
       data1$observation_source_values %>%
         select(observation_source_value, source_concept_name, obs_concept_id, n_old =n) %>% 
         inner_join(
@@ -478,10 +492,10 @@ if ("observation_source_values" %in% names(data1)) {
         filter(n_new < n_old) %>% 
         mutate(issue = "decreased n") %>% 
         arrange(desc(n_old))
-      ) 
+    ) |> 
+    filter(n_new >= 10 | n_old >= 10) 
   
   data_obs_all %>% 
-    filter(n_new >= 10 | n_old >= 10) %>% 
     datatable(
       filter = "top",
       options = list(
@@ -500,6 +514,26 @@ if ("observation_source_values" %in% names(data1)) {
         c("lightpink",  "lightgreen", "#FFD580")
       )
     )
+} else if("observation_source_values" %in% all_tables){
+  data1$observation_source_values |> 
+    bind_rows(data2$observation_source_values) |> 
+    select(obs_concept_id, observation_source_value, source_concept_id, source_concept_name, n, db) |>
+    distinct(.keep_all = TRUE) |> 
+    pivot_wider(
+      id_cols = c(obs_concept_id, observation_source_value, source_concept_id, source_concept_name),
+      names_from   = db,
+      values_from  = n,
+      names_prefix = "n_"
+    ) %>% 
+    datatable(
+      filter = "top",
+      options = list(
+              scrollX = TRUE,     
+              scrollY = "400px",
+              paging = FALSE,    # sin paginación
+              dom = 't'           
+            )
+      )
 }
 ```
 
@@ -508,28 +542,28 @@ if ("observation_source_values" %in% names(data1)) {
 
 
 ```{r,  echo=FALSE}
-if ("obs_nationality" %in% names(data1)) {
-  data1$obs_nationality %>%
-    rename(n_old = n) %>% 
-    select(-db) %>% 
-    full_join(
-      data2$obs_nationality %>% 
-        rename(n_new = n) %>% 
-        select(-db),
-      by = "nationality"
-    ) %>% 
-    arrange(desc(n_new)) %>%
-    mutate(
-      n_old = ifelse(n_old <5, "<5", as.character(n_old)),
-      n_new = ifelse(n_new <5, "<5", as.character(n_new))              
-    ) %>% 
-    datatable(options = list(
-              scrollX = TRUE,
-              scrollY = "400px",
-              pageLength = 10000,
-              dom = 't'
-            ))
+if ("obs_nationality" %in% all_tables) {
+
+data1$obs_nationality |>  
+  bind_rows(data2$obs_nationality) |>
+  mutate(n = ifelse(n < 5, "<5", as.character(n))) |> 
+  pivot_wider(
+    id_cols     = nationality,
+    names_from  = db,
+    values_from = n,
+    names_prefix = "n_"
+  ) %>% 
+  datatable(
+    options = list(
+            scrollX = TRUE,
+            scrollY = "400px",
+            pageLength = 10000,
+            dom = 't'
+          )
+  )
+
 }
+
 ```
 
 
@@ -539,9 +573,9 @@ if ("obs_nationality" %in% names(data1)) {
 Check for each type of drug record, how is the quantity value and days supply recorded (if it's NA or VALUE (zero/non-zero)).
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("drug_quantity" %in% names(data1)) {
+if ("drug_quantity" %in% all_tables) {
   data1$drug_quantity %>% 
-    add_row(data2$drug_quantity) %>% 
+    bind_rows(data2$drug_quantity) %>% 
     group_by(db, concept_name) %>% 
     mutate(total_n = sum(n)) %>% 
     ggplot(aes(x = concept_name, y = n, fill = quantity_val)) +
@@ -565,9 +599,9 @@ if ("drug_quantity" %in% names(data1)) {
 
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("drug_days_supply" %in% names(data1)) {
+if ("drug_days_supply" %in% all_tables) {
   data1$drug_days_supply %>% 
-    add_row(data2$drug_days_supply) %>% 
+    bind_rows(data2$drug_days_supply) %>% 
     group_by(concept_name, db) %>% 
     ggplot(aes(x = concept_name, y = n, fill = days_supply_val)) +
     geom_bar(
@@ -595,9 +629,9 @@ if ("drug_days_supply" %in% names(data1)) {
 Check how many drug concepts are mapped to drug_concept_id = 0
 
 ```{r, fig.width=8, fig.height=5, echo=FALSE}
-if ("drug_source_values" %in% names(data1)) {
+if ("drug_source_values" %in% all_tables) {
   data1$drug_source_values %>% 
-    add_row(data2$drug_source_values) %>% 
+    bind_rows(data2$drug_source_values) %>% 
     mutate(label = paste0(n_id0, " (", round(100 * n_id0 / n, 1), "%)")) %>%
     pivot_longer(
       cols = c(n, n_id0),
@@ -620,30 +654,27 @@ if ("drug_source_values" %in% names(data1)) {
 
 Check how many records represents the drugs with drug_concept_id = 0
 
+
 ```{r, fig.width=8, fig.height=8, echo=FALSE}
-if ("drug_source_values_id0_n" %in% names(data1) & "drugs_id_n" %in% names(data1)) {
-  drugs_id_zero <- data1$drug_source_values_id0_n %>%
-    group_by(drug_type_concept_id) %>% 
-    summarise(n_rec = sum(n)) %>% 
-    mutate(db = database1, drug_id = "id=0") %>% 
-    add_row(
-      data2$drug_source_values_id0_n %>%
-        group_by(drug_type_concept_id) %>%
-        summarise(n_rec = sum(n)) %>%
-        mutate(db = database2, drug_id = "id=0")
-      )
+if ("drug_source_values_id0_n" %in% all_tables & "drugs_id_n" %in% all_tables) {
+  
+  drugs_id_zero <- data1$drug_source_values_id0_n |> 
+    bind_rows(data2$drug_source_values_id0_n) |>
+    group_by(drug_type_concept_id, db) |>
+    summarise(n_rec = sum(n), .groups = "drop") |>
+    mutate(drug_id = "id=0")
   
   drugs_id_nonzero <- data1$drugs_id_n %>% 
-    add_row(data2$drugs_id_n) %>% 
+    bind_rows(data2$drugs_id_n) %>% 
     mutate(drug_id = "id") 
   
   n_tot <- drugs_id_zero %>% 
-    add_row(drugs_id_nonzero) %>% 
+    bind_rows(drugs_id_nonzero) %>% 
     group_by(db) %>% 
     summarise(n_tot = sum(n_rec)) 
   
   drugs_id_zero %>% 
-    add_row(drugs_id_nonzero) %>% 
+    bind_rows(drugs_id_nonzero) %>% 
     group_by(db, drug_id) %>% 
     summarise(n = sum(n_rec), .groups = "keep") %>% 
     left_join(n_tot, by="db") %>% 
@@ -675,9 +706,9 @@ swr = Vectorize(swr)
 
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("conditions_medications" %in% names(data1)) {
+if ("conditions_medications" %in% all_tables) {
   data1$conditions_medications%>%
-    add_row(data2$conditions_medications)%>%
+    bind_rows(data2$conditions_medications)%>%
     filter(grepl('ATC', cohort_name,ignore.case=TRUE))%>%
     mutate(cohort_name=swr(cohort_name))%>%
     ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
@@ -690,9 +721,9 @@ if ("conditions_medications" %in% names(data1)) {
 ```
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("conditions_medications" %in% names(data1)) {
+if ("conditions_medications" %in% all_tables) {
   data1$conditions_medications%>%
-    add_row(data2$conditions_medications)%>%
+    bind_rows(data2$conditions_medications)%>%
     filter((grepl('Pregnancy',cohort_name)) |
    (grepl('perinatal',cohort_name)))%>%
     mutate(cohort_name=swr(cohort_name))%>%
@@ -706,9 +737,9 @@ if ("conditions_medications" %in% names(data1)) {
 ```
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("conditions_medications" %in% names(data1)) {
+if ("conditions_medications" %in% all_tables) {
   data1$conditions_medications%>%
-    add_row(data2$conditions_medications)%>%
+    bind_rows(data2$conditions_medications)%>%
     filter((grepl('heart',cohort_name)) |
           (grepl('veins',cohort_name)) |
           (grepl('arteries',cohort_name)))%>%
@@ -723,9 +754,9 @@ if ("conditions_medications" %in% names(data1)) {
 ```
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("conditions_medications" %in% names(data1)) {
+if ("conditions_medications" %in% all_tables) {
   data1$conditions_medications%>%
-    add_row(data2$conditions_medications)%>%
+    bind_rows(data2$conditions_medications)%>%
     filter((grepl('nervous',cohort_name)) |
           (grepl('renal',cohort_name)))%>%
     mutate(cohort_name=swr(cohort_name))%>%
@@ -740,9 +771,9 @@ if ("conditions_medications" %in% names(data1)) {
 
 ### Sex-specific diseases
 ```{r,  fig.width=8, fig.height=6, echo=FALSE}
-if ("cancer_sex" %in% names(data1)) {
+if ("cancer_sex" %in% all_tables) {
   data1$cancer_sex%>%
-    add_row(data2$cancer_sex)%>%
+    bind_rows(data2$cancer_sex)%>%
     ggplot(aes(x=cohort_name, y=n, color= db, fill=db))+
     facet_grid(sex ~ ., scales="free_y")+
     geom_bar(aes(group=db),stat="identity", position=position_dodge(width = 0.6),width = 0.6)+
@@ -758,78 +789,71 @@ if ("cancer_sex" %in% names(data1)) {
 
 Rows that have changed from previous instance to new one:
 
-```{r,  fig.width=8, fig.height=5, echo=FALSE}
-if ("source_to_concept" %in% names(data1)) {
-  tbl_stc <- data1$source_to_concept %>% 
-    select(
-      source_code, 
-      source_description = source_code_description, 
-      target_voc_old = target_vocabulary_id, 
-      target_id_old = target_concept_id
+```{r, echo=FALSE}
+if ("source_to_concept" %in% all_tables) {
+   tbl_stc <- data1$source_to_concept |> 
+     bind_rows(data2$source_to_concept) |> 
+     select(-c(valid_start_date, valid_end_date, invalid_reason)) |> 
+     pivot_wider(
+      id_cols     = source_code,
+      names_from  = db,
+      values_from = c(target_concept_id, target_vocabulary_id, source_code_description),
+      names_glue  = "{.value}_{db}",
+      values_fn    = first
     ) 
-  if ("source_to_concept" %in% names(data2)) {
-    tbl_stc <- tbl_stc %>% 
-      full_join(
-        data2$source_to_concept %>% 
-          select(
-            source_code,
-            target_voc_new = target_vocabulary_id,
-            target_id_new = target_concept_id
-          ), 
-        by ="source_code"
-      ) %>% 
-      filter(target_id_old != target_id_new) %>% 
-      select(source_code, source_description, target_id_new, target_voc_new, 
-             target_id_old, target_voc_old
-      ) %>%
-      mutate(issue = 
-         ifelse(target_voc_new =="None" & target_voc_old !="None", "added", 
-                ifelse(target_voc_new !="None" & target_voc_old =="None", "removed","changed")
+   
+   if ("source_to_concept" %in% int_tables) {
+     tbl_stc |> 
+       filter(
+        .data[[paste0("target_concept_id_", database1)]] != 
+        .data[[paste0("target_concept_id_", database2)]]
+      ) |> 
+      mutate(
+        issue = 
+         ifelse(.data[[paste0("target_vocabulary_id_", database2)]] !="None" &
+                  .data[[paste0("target_vocabulary_id_", database1)]] =="None", 
+                "added", 
+                ifelse(.data[[paste0("target_vocabulary_id_", database2)]] =="None" &
+                         .data[[paste0("target_vocabulary_id_", database1)]] !="None",
+                       "removed",
+                       "changed"
+                       )
                 )
-      )
-  }else{
-    tbl_stc <- tbl_stc %>% 
-      mutate(issue = "removed")
-    
-  }
-}else if("source_to_concept" %in% names(data2)){
-  tbl_stc <- data2$source_to_concept %>% 
-    select(
-      source_code,
-      target_voc_new= target_vocabulary_id,
-      target_id_new = target_concept_id
-    )%>% 
-    mutate(issue = "added")
-  
-} else{
-  tbl_stc <- NULL
-}
-  
-if(!is.null(tbl_stc)) {
- tbl_stc %>% 
-    mutate(issue = factor(issue, levels = c("changed", "added", "removed"))) %>% 
-    arrange(issue) %>% 
-    datatable(
-      filter= "top",
-      options = list(
-        scrollX = TRUE,     
-        scrollY = "400px",  
-        # pageLength = 100,   
-        paging=FALSE,
-        dom = 't'           
-      )) %>% 
-      formatStyle(
-        'issue',
-        target = 'row',
-        backgroundColor = styleEqual(
-              c("changed", "added", "removed"), 
-              c("#FFD580","lightgreen","lightpink")
+      ) %>% 
+      mutate(issue = factor(issue, levels = c("changed", "added", "removed"))) %>% 
+      arrange(issue) %>% 
+      datatable(
+        filter= "top",
+        options = list(
+          scrollX = TRUE,     
+          scrollY = "400px",  
+          # pageLength = 100,   
+          paging=FALSE,
+          dom = 't'           
+        )) %>% 
+        formatStyle(
+          'issue',
+          target = 'row',
+          backgroundColor = styleEqual(
+                c("changed", "added", "removed"), 
+                c("#FFD580","lightgreen","lightpink")
+          )
         )
-      )
+   }else{
+     tbl_stc |> 
+       datatable(
+        filter= "top",
+        options = list(
+          scrollX = TRUE,     
+          scrollY = "400px",  
+          # pageLength = 100,   
+          paging=FALSE,
+          dom = 't'           
+        ))
+   }
 }
+
 ```
-
-
 
 
 
