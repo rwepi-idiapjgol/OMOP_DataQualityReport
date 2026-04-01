@@ -727,65 +727,76 @@ swr = Vectorize(swr)
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
 if ("conditions_medications" %in% all_tables) {
-  data1$conditions_medications%>%
-    bind_rows(data2$conditions_medications)%>%
-    filter(grepl('ATC', cohort_name,ignore.case=TRUE))%>%
-    mutate(cohort_name=swr(cohort_name))%>%
-    ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
-    facet_grid(cohort_name~ ., scales="free_y")+
-    geom_bar(stat="identity", position="dodge")+
-    theme(strip.text = element_text(size = 8),
-          legend.position = "bottom") +
-    labs(subtitle = "Cohorts of individuals with antidepressants, anxiolytics and hypnotics/sedatives (ATC 3rd level)")
+  data_cond1 <- data1$conditions_medications %>%
+    bind_rows(data2$conditions_medications) %>%
+    filter(grepl('ATC', cohort_name,ignore.case=TRUE))
+  
+  if (nrow(data_cond1) != 0) {
+    data_cond1 %>%
+      mutate(cohort_name=swr(cohort_name))  %>%
+      ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
+      facet_grid(cohort_name~ ., scales="free_y")+
+      geom_bar(stat="identity", position="dodge")+
+      theme(strip.text = element_text(size = 8),
+            legend.position = "bottom") +
+      labs(subtitle = "Cohorts of individuals with antidepressants, anxiolytics and hypnotics/sedatives (ATC 3rd level)")
+  }
 }
 ```
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
 if ("conditions_medications" %in% all_tables) {
-  data1$conditions_medications%>%
+  data_cond2 <-data1$conditions_medications%>%
     bind_rows(data2$conditions_medications)%>%
-    filter((grepl('Pregnancy',cohort_name)) |
-   (grepl('perinatal',cohort_name)))%>%
-    mutate(cohort_name=swr(cohort_name))%>%
-    ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
-    facet_grid(cohort_name~ ., scales="free_y")+
-    geom_bar(stat="identity", position="dodge")+
-    theme(strip.text = element_text(size = 8),
-          legend.position = "bottom") +
-    labs(subtitle = "Cohorts of individuals with certain conditions originating in the perinatal period")
+    filter((grepl('Pregnancy',cohort_name)) | (grepl('perinatal',cohort_name)))
+  
+  if(nrow(data_cond2)!=0){
+    data_cond2 |> 
+      mutate(cohort_name=swr(cohort_name))%>%
+      ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
+      facet_grid(cohort_name~ ., scales="free_y")+
+      geom_bar(stat="identity", position="dodge")+
+      theme(strip.text = element_text(size = 8), legend.position = "bottom") +
+      labs(subtitle = "Cohorts of individuals with certain conditions originating in the perinatal period")
+  }
 }
 ```
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
 if ("conditions_medications" %in% all_tables) {
-  data1$conditions_medications%>%
-    bind_rows(data2$conditions_medications)%>%
-    filter((grepl('heart',cohort_name)) |
-          (grepl('veins',cohort_name)) |
-          (grepl('arteries',cohort_name)))%>%
-    mutate(cohort_name=swr(cohort_name))%>%
-    ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
-    facet_grid(cohort_name~ ., scales="free_y")+
-    geom_bar(stat="identity", position="dodge")+
-    theme(strip.text = element_text(size = 6),
-          legend.position = "bottom") +
-    labs(subtitle = "Cohorts of individuals with cardiovascular diseases")
+  data_cond3 <- data1$conditions_medications %>%
+    bind_rows(data2$conditions_medications) %>%
+    filter((grepl('heart',cohort_name)) | (grepl('veins',cohort_name)) | (grepl('arteries',cohort_name)))
+  
+ if(nrow(data_cond3)!=0){
+    data_cond3 |> 
+      mutate(cohort_name=swr(cohort_name))%>%
+      ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
+      facet_grid(cohort_name~ ., scales="free_y")+
+      geom_bar(stat="identity", position="dodge")+
+      theme(strip.text = element_text(size = 6),
+            legend.position = "bottom") +
+      labs(subtitle = "Cohorts of individuals with cardiovascular diseases")
+ }
 }
 ```
 
 ```{r,  fig.width=8, fig.height=5, echo=FALSE}
 if ("conditions_medications" %in% all_tables) {
-  data1$conditions_medications%>%
+  data_cond4 <- data1$conditions_medications%>%
     bind_rows(data2$conditions_medications)%>%
-    filter((grepl('nervous',cohort_name)) |
-          (grepl('renal',cohort_name)))%>%
-    mutate(cohort_name=swr(cohort_name))%>%
-    ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
-    facet_grid(cohort_name~ ., scales="free_y")+
-    geom_bar(stat="identity", position="dodge")+
-    theme(strip.text = element_text(size = 8),
-          legend.position = "bottom") +
-    labs(subtitle = "Cohorts of individuals with nervous and renal diseases")
+    filter((grepl('nervous',cohort_name)) | (grepl('renal',cohort_name)))
+    
+  if(nrow(data_cond4)!=0){
+    data_cond4 |> 
+      mutate(cohort_name=swr(cohort_name))%>%
+      ggplot(aes(x=cohort_start_date, y=n, color= db, fill=db))+
+      facet_grid(cohort_name~ ., scales="free_y")+
+      geom_bar(stat="identity", position="dodge")+
+      theme(strip.text = element_text(size = 8),
+            legend.position = "bottom") +
+      labs(subtitle = "Cohorts of individuals with nervous and renal diseases")
+  }
 }
 ```
 
