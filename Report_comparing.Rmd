@@ -102,30 +102,40 @@ if(any(c(runCheckDB1, runCheckDB2))){
 
 # Get results previous database instance
 if(runCheckDB1){
-  getChecksData(dbms = driver,
-                server_dbi = Sys.getenv("DB_SERVER_OLD"),
-                port = Sys.getenv("DB_PORT_OLD"),
-                host = Sys.getenv("DB_HOST_OLD"),
-                user = Sys.getenv("DB_USER_OLD"),
-                password = Sys.getenv("DB_PASSWORD_OLD"),
-                cdm_schema = "...",
-                write_schema = "...",
-                output_folder = path1)
-  csv_files1 <- list.files(path = path1, pattern = "\\.csv", full.names = TRUE)
+  tryCatch({
+    getChecksData(dbms = driver,
+                  server_dbi = Sys.getenv("DB_SERVER_OLD"),
+                  port = Sys.getenv("DB_PORT_OLD"),
+                  host = Sys.getenv("DB_HOST_OLD"),
+                  user = Sys.getenv("DB_USER_OLD"),
+                  password = Sys.getenv("DB_PASSWORD_OLD"),
+                  cdm_schema = "...",
+                  write_schema = "...",
+                  output_folder = path1)
+    csv_files1 <- list.files(path = path1, pattern = "\\.csv", full.names = TRUE)
+  }, error = function(e) {
+    message("Error in getChecksData for DB1: ", e$message)
+    csv_files1 <<- c()
+  })
 }
 
 # Get results new database instance
 if(runCheckDB2){
-  getChecksData(dbms = driver,
-                server_dbi = Sys.getenv("DB_SERVER_NEW"),
-                port = Sys.getenv("DB_PORT_NEW"),
-                host = Sys.getenv("DB_HOST_NEW"),
-                user = Sys.getenv("DB_USER_NEW"),
-                password = Sys.getenv("DB_PASSWORD_NEW"),
-                cdm_schema = "...",
-                write_schema = "...",
-                output_folder = path2)
-  csv_files2 <- list.files(path = path2, pattern = "\\.csv", full.names = TRUE)
+  tryCatch({
+    getChecksData(dbms = driver,
+                  server_dbi = Sys.getenv("DB_SERVER_NEW"),
+                  port = Sys.getenv("DB_PORT_NEW"),
+                  host = Sys.getenv("DB_HOST_NEW"),
+                  user = Sys.getenv("DB_USER_NEW"),
+                  password = Sys.getenv("DB_PASSWORD_NEW"),
+                  cdm_schema = "...",
+                  write_schema = "...",
+                  output_folder = path2)
+    csv_files2 <- list.files(path = path2, pattern = "\\.csv", full.names = TRUE)
+  }, error = function(e) {
+    message("Error in getChecksData for DB2: ", e$message)
+    csv_files2 <<- c()
+  })
 }
 ```
 
