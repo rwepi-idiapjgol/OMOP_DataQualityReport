@@ -687,7 +687,16 @@ Check how many records represents the drugs with drug_concept_id = 0
 
 ```{r, fig.width=8, fig.height=8, echo=FALSE}
 if ("drug_source_values_id0_n" %in% all_tables & "drugs_id_n" %in% all_tables) {
-  
+
+  if("drug_source_values_id0_n" %in% names(data1)){
+    data1$drug_source_values_id0_n <- data1$drug_source_values_id0_n |> 
+      mutate(drug_source_value = as.character(drug_source_value)) 
+  }
+  if("drug_source_values_id0_n" %in% names(data2)){
+    data2$drug_source_values_id0_n <- data2$drug_source_values_id0_n |> 
+      mutate(drug_source_value = as.character(drug_source_value)) 
+  }
+
   drugs_id_zero <- data1$drug_source_values_id0_n |> 
     bind_rows(data2$drug_source_values_id0_n) |>
     group_by(drug_type_concept_id, db) |>
