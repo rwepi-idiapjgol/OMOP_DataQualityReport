@@ -620,6 +620,7 @@ if ("drug_quantity" %in% all_tables) {
       vjust = -0.1,
       size = 3
     )+
+    scale_fill_brewer(palette = "Set2", na.value = "lightpink") +  # Paleta automática para fill
     # scale_fill_manual(values = c("non-zero value" = "purple", "zero value" = "#1b9e67", "NA" = "grey")) +
     # scale_color_manual(values = c("non-zero value" = "purple", "zero value" = "#1b9e67", "NA" = "grey"))+
     labs(subtitle = "Drug quantity")
@@ -645,6 +646,7 @@ if ("drug_days_supply" %in% all_tables) {
       vjust = -0.1,
       size = 3
     )+
+    scale_fill_brewer(palette = "Set2", na.value = "lightpink") +  # Paleta automática para fill
     # scale_fill_manual(values = c("non-zero value" = "purple", "zero value" = "#1b9e67", "NA" = "grey")) +
     # scale_color_manual(values = c("non-zero value" = "purple", "zero value" = "#1b9e67", "NA" = "grey"))+
     labs(subtitle = "Drug days supply")
