@@ -390,10 +390,9 @@ if ("visits" %in% all_tables) {
 if ("procedures" %in% all_tables) {
   data1$procedures %>%
     bind_rows(data2$procedures) %>%
-    ggplot(aes(x=vocabulary_id, y=n_total_voc, color=vocabulary_id, fill=vocabulary_id))+
-    geom_bar(stat="identity")+
-    geom_text(aes(label = n_total_voc), vjust = -0.1, size = 3)+
-    facet_grid(db ~ .)+
+    complete(vocabulary_id, db, fill = list(n_total_voc = 0)) |> 
+    ggplot(aes(x=vocabulary_id, y=n_total_voc, color=db, fill=db))+
+    geom_bar(stat="identity", position = "dodge")+
     labs(subtitle  ="Records of procedures grouped by vocabulary id")
 }
 ```
