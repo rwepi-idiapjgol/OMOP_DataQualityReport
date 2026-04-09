@@ -55,10 +55,6 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
   if(!exists("minimum_counts")){
     minimum_counts = 5
   }
-  # output folder
-  if (!dir.exists(output_folder)) {
-    dir.create(output_folder)
-  }
   #CDM Connection
   db <- DBI::dbConnect(
     drv = dbms,
@@ -73,6 +69,11 @@ getChecksData <- function(dbms, server_dbi, port, host, user, password, cdm_sche
     cdmSchema = cdm_schema, 
     writeSchema = c("schema" = write_schema, "prefix" = tolower(table_stem))
   )
+  # output folder
+  if (!dir.exists(output_folder)) {
+    dir.create(output_folder)
+  }
+  #mother table
   if(!exists("mother_table_schema")){
     mother_table_schema <- cdm_schema
   }
