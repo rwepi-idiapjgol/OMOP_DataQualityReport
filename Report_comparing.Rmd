@@ -114,7 +114,7 @@ if(runCheckDB1){
                   output_folder = path1)
     csv_files1 <- list.files(path = path1, pattern = "\\.csv", full.names = TRUE)
   }, error = function(e) {
-    message("Error in getChecksData for DB1: ", e$message)
+    cat("Error in getChecksData for DB1:", e$message, "\n", file = stderr())
     csv_files1 <<- c()
   })
 }
@@ -133,7 +133,7 @@ if(runCheckDB2){
                   output_folder = path2)
     csv_files2 <- list.files(path = path2, pattern = "\\.csv", full.names = TRUE)
   }, error = function(e) {
-    message("Error in getChecksData for DB2: ", e$message)
+    cat("Error in getChecksData for DB2:", e$message, "\n", file = stderr())
     csv_files2 <<- c()
   })
 }
